@@ -36,6 +36,7 @@ fn_filter_annotation <- function(.count) {
   )
 }
 
+
 fn_filter_by_gene_count <- function(.se, minCounts = 10, fSample = 0.9, thres = 3) {
 
   apply(X = assay(.se), MARGIN = 1, FUN = function(x) {
@@ -44,6 +45,7 @@ fn_filter_by_gene_count <- function(.se, minCounts = 10, fSample = 0.9, thres = 
 
   rownames(.se)[.a]
 }
+
 
 fn_filter_by_hyper <- function(.x, .xse) {
   assay(.xse[, .xse$class == .x]) %>% apply(MARGIN = 1, FUN = ineq::ineq, type = "var") %>%
