@@ -198,3 +198,45 @@ fn_predidct_performance_metrics <- function(.x, .model, .task, .samples) {
     metrics = .pred_metrics
   )
 }
+
+
+fn_performance <- function(.model, .list) {
+  .task <- .list$task
+  .samples <- .list$samples
+
+  purrr::map(
+    names(.samples),
+    fn_predidct_performance_metrics,
+    .model = .model,
+    .task = .task,
+    .samples = .samples
+  ) ->
+    .perf
+
+  names(.perf) <- names(.samples)
+  .perf
+}
+
+fn_get_metrics <- function(.perf) {
+  .perf %>%
+    purrr::map("metrics") %>%
+    purrr::reduce(.f = dplyr::bind_rows)
+}
+
+
+fn_get_auc_plot <- function(.perf, .metrics) {
+
+  .metrics %>%
+    dplyr::mutate(auc = gsub(pattern = " ", replacement = "", x = `AUC (95% CI)`)) %>%
+    dplyr::select(cohort, auc) %>%
+    dplyr::mutate(label = glue::glue("{cohort} {auc}")) ->
+    .labels
+
+  .d <- .perf %>%
+    purrr::map("perf") %>%
+    purrr::reduce(.f = dplyr::bind_rows) %>%
+    dplyr::mutate(cohort = factor(x = cohort, levels = .labels$cohort))
+
+  fn_plot_auc(.d, .labels)
+
+}
