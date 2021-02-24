@@ -1,6 +1,6 @@
 
 
-fn_bm_se2task <- function(.se, .id = "task") {
+fn_se2task_panel <- function(.se, .id = "task") {
   .d <- cbind(
     t(assay(.se)),
     data.frame(
@@ -17,10 +17,36 @@ fn_bm_se2task <- function(.se, .id = "task") {
 }
 
 
+fn_se2task_panel_ca125 <- function(.se) {
+  .d <- cbind(
+    t(assay(.se)),
+    data.frame(
+      CA125 = .se$CA125,
+      class = .se$class
+    )
+  )
+  .task_panel_ca125 <- mlr::makeClassifTask(
+    id = "Panel-CA125-task",
+    data = .d,
+    target = "class",
+    positive = "M"
+  )
+  .task_ca125 <- mlr::subsetTask(
+    task = .task_panel_ca125,
+    features = "CA125"
+  )
+  list(
+    task_panel_ca125 = .task_panel_ca125,
+    task_ca125 = .task_ca125
+  )
+}
+
+
 fn_task_ind <- function(.x, .se) {
   .ind <- which(.se$cohort == .x)
   setNames(.ind, nm = .se@colData[.ind, "barcode"])
 }
+
 
 fn_tune_model <- function(.tsk) {
   set.seed(123)
@@ -61,6 +87,7 @@ fn_tune_model <- function(.tsk) {
   )
 }
 
+
 fn_plot_tune_path <- function(.tune_result, .task_id) {
   .task_name <- gsub(pattern = '-task', replacement = '', x = .task_id)
   .hped <-  mlr::generateHyperParsEffectData(tune.result = .tune_result, trafo = TRUE)
@@ -89,6 +116,8 @@ fn_plot_tune_path <- function(.tune_result, .task_id) {
 
   .plot_hpe
 }
+
+
 fn_auc_ci <- function(.p) {
   .truth <- mlr::getPredictionTruth(pred = .p)
   .prob <- mlr::getPredictionProbabilities(pred = .p)
@@ -104,6 +133,8 @@ fn_auc_ci <- function(.p) {
     auc = .ci
   )
 }
+
+
 fn_roc_95ci <- function(.p) {
   # acc - Accuracy
   # tpr - True positive rate (Sensitivity, Recall)
@@ -129,6 +160,7 @@ fn_roc_95ci <- function(.p) {
   )
 
 }
+
 
 fn_predidct_performance_metrics <- function(.x, .model, .task, .samples) {
   .pred <- predict(
@@ -165,46 +197,4 @@ fn_predidct_performance_metrics <- function(.x, .model, .task, .samples) {
     perf = .pred_perf,
     metrics = .pred_metrics
   )
-}
-
-
-fn_plot_auc <- function(.d, .labels) {
-  .d %>%
-    ggplot(aes(x = fpr, y = tpr, color = cohort)) +
-    geom_path(size = 1) +
-    geom_abline(intercept = 0, slope = 1, linetype = 11) +
-    scale_x_continuous(breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1.0), limits = c(0, 1), expand = c(0, 0)) +
-    scale_y_continuous(breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1.0), limits = c(0, 1), expand = c(0, 0)) +
-    scale_color_manual(
-      name = 'AUC',
-      labels = .labels$label,
-      values = RColorBrewer::brewer.pal(n=5, name = 'Set1')
-    ) +
-    theme(
-      panel.background = element_rect(fill = NA),
-      panel.grid = element_blank(),
-      panel.border = element_blank(),
-
-      axis.line.x.bottom = element_line(color = 'black'),
-      axis.line.y.left = element_line(color = 'black'),
-      axis.ticks.length = unit(x = 0.2, units = 'cm'),
-      axis.text = element_text(color = 'black', size = 14),
-      axis.title = element_text(color = 'black', size = 16),
-
-      legend.position = c(0.68, 0.2),
-      legend.background = element_rect(fill = NA),
-      legend.key = element_rect(fill = NA),
-      legend.text = element_text(size = 14),
-      legend.title = element_text(size = 14),
-      legend.key.width = unit(1.5, units = 'cm'),
-      legend.spacing = unit(c(0,0,0,0), units = 'cm'),
-      legend.title.align = 1,
-
-      plot.margin = unit(c(1,1,0.5,0.5), units = 'cm'),
-      plot.title = element_text(hjust = 0.5, size = 18)
-    ) +
-    labs(
-      x = "1 - Specificity",
-      y = "Sensitivity"
-    )
 }
