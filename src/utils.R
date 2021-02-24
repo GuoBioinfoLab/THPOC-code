@@ -51,3 +51,77 @@ fn_filter_by_hyper <- function(.x, .xse) {
   assay(.xse[, .xse$class == .x]) %>% apply(MARGIN = 1, FUN = ineq::ineq, type = "var") %>%
     tibble::enframe()
 }
+
+
+fn_remove_unwanted_variables <- function(.se, .vars = c('cohort', 'age', 'lib.size', 'library'), .th_pval = 0.05, .th_var_strong = 0.1) {
+  .vars <- if (! 'class' %in% .vars) c(.vars, 'class') else .vars
+  .mod <-  model.matrix(~class, data = .se@colData)
+  .mod0 <-  model.matrix(~1, data = .se@colData)
+  .svobj <- sva(dat = assay(.se), mod = .mod, mod0 = .mod0, n.sv = 100)
+
+  .matrix_w_corr_vars <- foreach(i = 1:ncol(.svobj$sv), .combine = rbind, .packages = c('magrittr')) %dopar% {
+    .vars %>%
+      purrr::map_dbl(
+        .f = function(.x) {
+          if (.x %in% c('class', 'cohort', 'library')) {
+            aov(formula = .svobj$sv[, i] ~ .se@colData[, .x]) %>%
+              broom::tidy() %>%
+              dplyr::slice(1) %>%
+              dplyr::pull(p.value)
+            } else {
+              cor.test(
+                x = .svobj$sv[, i],
+                y = .se@colData[, .x],
+                method = 'pearson') %>%
+                broom::tidy() %>%
+                dplyr::slice(1) %>%
+                dplyr::pull(p.value)
+      }
+    }) -> .vars_pval
+
+    names(.vars_pval) <- .vars
+
+    if (.vars_pval['class'] > .th_pval) {
+      .strong_var <- names(sort(x = .vars_pval))[1]
+    } else {
+      .strong_var <- 'class'
+    }
+    if (.vars_pval[.strong_var] < .th_var_strong) {
+      .verdict <- names(.vars_pval[.strong_var])
+    } else {
+      .verdict <- NA
+    }
+
+    c(.vars_pval, verdict = .verdict)
+  }
+
+  rownames(.matrix_w_corr_vars) <- 1:ncol(.svobj$sv)
+  .vars %>%
+    purrr::map(.f = function(.x) {
+    unname(which(.matrix_w_corr_vars[, 'verdict'] == .x))
+  }) -> confounding
+
+  names(confounding) <- .vars
+  confounding$na <- unname(which(is.na(.matrix_w_corr_vars[, 'verdict'])))
+  confounding$confounding <- setdiff(1:ncol(.svobj$sv), c(confounding$class))
+
+  .data_rm_be <- removeBatchEffect(assay(.se), design = .mod, covariates = .svobj$sv[, confounding$confounding])
+
+  SummarizedExperiment(assays = .data_rm_be, colData = .se@colData[colnames(.data_rm_be), ])
+}
+
+fn_sd_median <- function(.se) {
+  .sd <- assay(.se) %>%
+    apply(MARGIN = 1, FUN = sd)
+  .md <- assay(.se) %>%
+    apply(MARGIN = 1, FUN = median)
+
+  names(.md[.md > 0])
+}
+
+fn_se2df <- function(.se) {
+  .df <- as.data.frame(t(assay(.se)))
+  .target <- .se$class
+  .df$class <- .target
+  .df
+}
