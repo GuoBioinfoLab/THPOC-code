@@ -5,6 +5,7 @@ library(magrittr)
 library(DESeq2)
 library(mlr)
 library(doParallel)
+library(ggplot2)
 
 # src ---------------------------------------------------------------------
 
@@ -36,50 +37,76 @@ fn_task <- function(.wt, .panel) {
 fn_tune_hyper_parameters <- function(.list) {
   .task <- .list$task
   .samples <- .list$samples
-
   .task_id <- mlr::getTaskId(x = .task)
 
   .task_for_tunes <- mlr::subsetTask(task = .task, subset = .samples$TC)
 
-  set.seed(123)
-  .cv10d <- mlr::makeResampleDesc(method = "CV", iters = 10, stratify = TRUE)
-  .cv10i <- mlr::makeResampleInstance(desc = .cv10d, task = .task_for_tunes)
-  .learner <- mlr::makeLearner(
-    cl = "classif.ksvm",
-    id = "svm-learner",
-    predict.type = "prob"
-  )
-  .hyperparameters <- ParamHelpers::makeParamSet(
-    ParamHelpers::makeNumericParam("C", lower = -10, upper = 10, trafo = function(x) 10 ^ x),
-    ParamHelpers::makeNumericParam("sigma", lower = -10, upper = 10, trafo = function(x) 10 ^ x)
-  )
-  .tune_algorithm <-  mlr::makeTuneControlRandom(
-    same.resampling.instance = TRUE, maxit = 500L
-  )
-  mlr::configureMlr(
-    show.info = FALSE,
-    on.learner.error = 'warn',
-    on.measure.not.applicable = 'warn'
-  )
+  .tuned_model <- fn_tune_model(.tsk = .task_for_tunes)
 
-  parallelMap::parallelStart(mode = 'multicore', cpus = 100)
-  .tune_result <-  mlr::tuneParams(
-    learner = .learner, task = .task_for_tunes,
-    resampling = .cv10i,
-    measures = list(mlr::auc, mlr::mmce, mlr::acc),
-    par.set = .hyperparameters,
-    control = .tune_algorithm
-  )
-  parallelMap::parallelStop()
+  fn_plot_tune_path(.tune_result = .tuned_model$tune_result, .task_id = .task_id)
 
-  .hped <- mlr::generateHyperParsEffectData(.tune_result, trafo = TRUE)
-  .plot_hpe <- mlr::plotHyperParsEffect(.hped, x = "iteration", y = "auc.test.mean", plot.type = "line")
-  
-  .learner_tuned <- mlr::setHyperPars(learner = .learner, par.vals = .tune_result$x)
-  .model_tuned <- mlr::train(learner = .learner_tuned, task = .task, subset = .samples$train)
+  mlr::train(learner = .tuned_model$learner, task = .task, subset = .samples$TC)
 
 }
 
+fn_performance <- function(.model, .list) {
+  .task <- .list$task
+  .samples <- .list$samples
+
+  purrr::map(
+    names(.samples),
+    fn_predidct_performance_metrics,
+    .model = .model,
+    .task = .task,
+    .samples = .samples
+  ) ->
+    .perf
+
+  names(.perf) <- names(.samples)
+  .perf
+}
+
+fn_get_metrics <- function(.perf) {
+  .perf %>%
+    purrr::map("metrics") %>%
+    purrr::reduce(.f = dplyr::bind_rows)
+}
+
+fn_get_auc_plot <- function(.perf, .metrics) {
+
+  .metrics %>%
+    dplyr::mutate(auc = gsub(pattern = " ", replacement = "", x = `AUC (95% CI)`)) %>%
+    dplyr::select(cohort, auc) %>%
+    dplyr::mutate(label = glue::glue("{cohort} {auc}")) ->
+    .labels
+
+  .d <- .perf %>%
+    purrr::map("perf") %>%
+    purrr::reduce(.f = dplyr::bind_rows) %>%
+    dplyr::mutate(cohort = factor(x = cohort, levels = .labels$cohort))
+
+  fn_plot_auc(.d, .labels)
+
+}
 # Prepare task ------------------------------------------------------------
 wuhan.tom.task <- fn_task(.wt = wuhan.tom.fs.fg.norm.rbe.se, .panel = panel)
+
+panel.model <- fn_tune_hyper_parameters(.list = wuhan.tom.task)
+readr::write_rds(x = panel.model, file = "data/rda/panel.model.rds.gz", compress = "gz")
+
+panel.performance <- fn_performance(.model = panel.model, .list = wuhan.tom.task)
+
+panel.metrics <- fn_get_metrics(.perf = panel.performance)
+readr::write_tsv(x = panel.metrics, file = "data/output/panel.metrics.tsv")
+writexl::write_xlsx(x = panel.metrics, path = "data/output/panel.metrics.xlsx")
+
+panel.plot <- fn_get_auc_plot(.perf = panel.performance, .metrics = panel.metrics)
+ggsave(
+  filename = "panel.aucplot.pdf",
+  plot = panel.plot,
+  path = "data/output",
+  device = "pdf",
+  width = 6,
+  height = 6
+)
 
