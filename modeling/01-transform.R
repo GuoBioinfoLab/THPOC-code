@@ -6,7 +6,7 @@ library(DESeq2)
 
 
 # src ---------------------------------------------------------------------
-
+source(file = "src/utils.R")
 
 # Function ----------------------------------------------------------------
 
@@ -36,6 +36,13 @@ fn_filter_genes <- function(.w, .t) {
     .keep_genes_ineq
 
   .keep_genes_ineq
+  .se[.keep_genes_ineq, ]
+}
+
+fn_transform <- function(.se) {
+  .vst <- varianceStabilizingTransformation(object = assay(.se), fitType = "local")
+
+  SummarizedExperiment(assays = .vst, colData = .se@colData)
 }
 
 # Load data ---------------------------------------------------------------
@@ -52,13 +59,14 @@ tom.fs.se <- fn_filter_samples_by_mapped_reads(tom.se)
 
 # Filter genes ------------------------------------------------------------
 
-filter_genes <- fn_filter_genes(.w = wuhan.fs.se, .t = tom.fs.se)
-
-wuhan.fs.fg.se <- wuhan.fs.se[filter_genes, ]
-readr::write_rds(x = wuhan.fs.fg.se, file = "data/rda/wuhan.fs.fg.se.rds.gz", compress = "gz")
-tom.fs.fg.se <- tom.fs.se[filter_genes, ]
-readr::write_rds(x = tom.fs.fg.se, file = "data/rda/tom.fs.fg.se.rds.gz", compress = "gz")
+wuhan.tom.fs.fg.se <- fn_filter_genes(.w = wuhan.fs.se, .t = tom.fs.se)
+readr::write_rds(x = wuhan.tom.fs.fg.se, file = "data/rda/wuhan.tom.fs.fg.se.rds.gz", compress = "gz")
 
 # Transform ---------------------------------------------------------------
+wuhan.tom.fs.fg.norm.se <- fn_transform(.se = wuhan.tom.fs.fg.se)
+readr::write_rds(x = wuhan.tom.fs.fg.norm.se, file = "data/rda/wuhan.tom.fs.fg.norm.se.rds.gz", compress = "gz")
 
 
+# Save image --------------------------------------------------------------
+
+save.image(file = "data/rda/01-transform.rda")
