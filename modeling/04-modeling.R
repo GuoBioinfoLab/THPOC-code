@@ -194,6 +194,7 @@ fn_get_tom_plot <- function(.perf) {
 
 
 wuhan.tom.panel.task <- fn_task_panel(.wt = wuhan.tom.fs.fg.norm.rbe.se, .panel = panel)
+readr::write_rds(x = wuhan.tom.panel.task, file = "data/rda/wuhan.tom.panel.task.rds.gz")
 
 panel.model <- fn_tune_hyper_parameters(.list = wuhan.tom.panel.task)
 readr::write_rds(x = panel.model, file = "data/rda/panel.model.rds.gz", compress = "gz")
@@ -211,7 +212,7 @@ fn_save_auc(.filename = "panel.aucplot.pdf", .plot = panel.plot)
 # CA125 + panel-------------------------------------------------------------------
 
 wuhan.tom.panel.ca125.task <- fn_task_panel_ca125(.w = wuhan.se, .wt = wuhan.tom.fs.fg.norm.rbe.se, .panel = panel)
-
+readr::write_rds(x = wuhan.tom.panel.ca125.task, file = "data/rda/wuhan.tom.panel.ca125.task.rds.gz")
 # CA125 -------------------------------------------------------------------
 
 
