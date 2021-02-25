@@ -50,7 +50,7 @@ fn_task_ind <- function(.x, .se) {
 
 fn_tune_model <- function(.tsk) {
   set.seed(123)
-  .cv10d <- mlr::makeResampleDesc(method = "CV", iters = 5, stratify = TRUE)
+  .cv10d <- mlr::makeResampleDesc(method = "CV", iters = 10, stratify = TRUE)
   .cv10i <- mlr::makeResampleInstance(desc = .cv10d, task = .tsk)
   .learner <- mlr::makeLearner(
     cl = "classif.ksvm",
