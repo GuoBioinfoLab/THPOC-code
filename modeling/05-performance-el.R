@@ -90,7 +90,7 @@ el.task <- fn_get_el_task(
   .list = c("panel" = list(wuhan.tom.panel.task), wuhan.tom.panel.ca125.task),
   .w = wuhan.se
 )
-readr::write_rds(x = el.panel.task, file = "data/rda/el.task.rds.gz", compress = "gz")
+readr::write_rds(x = el.task, file = "data/rda/el.task.rds.gz", compress = "gz")
 
 # Performance -------------------------------------------------------------
 
