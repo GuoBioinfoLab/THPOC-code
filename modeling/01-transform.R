@@ -29,9 +29,9 @@ fn_filter_genes <- function(.w, .t) {
 
   .se[.keep_genes_c, ]$class %>%
     levels() %>%
-    purrr::map(.f = fn_filter_by_hyper, .xse) %>%
+    purrr::map(.f = fn_filter_by_hyper, .se[.keep_genes_c, ]) %>%
     purrr::reduce(.f = dplyr::left_join, by = "name") %>%
-    dplyr::filter_if(.predicate = is.numeric, .vars_predicate = dplyr::all_vars(. < thres)) %>%
+    dplyr::filter_if(.predicate = is.numeric, .vars_predicate = dplyr::all_vars(. < 3)) %>%
     dplyr::pull(name) ->
     .keep_genes_ineq
 
