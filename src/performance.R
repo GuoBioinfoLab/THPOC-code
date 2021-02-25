@@ -5,8 +5,8 @@ fn_se2task_panel <- function(.se, .id = "task") {
     t(assay(.se)),
     data.frame(
       class = .se$class
-      )
     )
+  )
 
   mlr::makeClassifTask(
     id = .id,
@@ -58,20 +58,20 @@ fn_tune_model <- function(.tsk) {
     predict.type = "prob"
   )
   .hyperparameters <- ParamHelpers::makeParamSet(
-    ParamHelpers::makeNumericParam("C", lower = -10, upper = 10, trafo = function(x) 10 ^ x),
-    ParamHelpers::makeNumericParam("sigma", lower = -10, upper = 10, trafo = function(x) 10 ^ x)
+    ParamHelpers::makeNumericParam("C", lower = -10, upper = 10, trafo = function(x) 10^x),
+    ParamHelpers::makeNumericParam("sigma", lower = -10, upper = 10, trafo = function(x) 10^x)
   )
-  .tune_algorithm <-  mlr::makeTuneControlRandom(
-    same.resampling.instance = TRUE, maxit = 10L
+  .tune_algorithm <- mlr::makeTuneControlRandom(
+    same.resampling.instance = TRUE, maxit = 100L
   )
   mlr::configureMlr(
     show.info = FALSE,
-    on.learner.error = 'warn',
-    on.measure.not.applicable = 'warn'
+    on.learner.error = "warn",
+    on.measure.not.applicable = "warn"
   )
 
-  parallelMap::parallelStart(mode = 'multicore', cpus = 100)
-  .tune_result <-  mlr::tuneParams(
+  parallelMap::parallelStart(mode = "multicore", cpus = 100)
+  .tune_result <- mlr::tuneParams(
     learner = .learner, task = .tsk,
     resampling = .cv10i,
     measures = list(mlr::auc, mlr::mmce, mlr::acc),
@@ -89,8 +89,8 @@ fn_tune_model <- function(.tsk) {
 
 
 fn_plot_tune_path <- function(.tune_result, .task_id) {
-  .task_name <- gsub(pattern = '-task', replacement = '', x = .task_id)
-  .hped <-  mlr::generateHyperParsEffectData(tune.result = .tune_result, trafo = TRUE)
+  .task_name <- gsub(pattern = "-task", replacement = "", x = .task_id)
+  .hped <- mlr::generateHyperParsEffectData(tune.result = .tune_result, trafo = TRUE)
 
   .plot_hpe <- mlr::plotHyperParsEffect(
     hyperpars.effect.data = .hped,
@@ -99,16 +99,16 @@ fn_plot_tune_path <- function(.tune_result, .task_id) {
   ) +
     theme_bw() +
     theme() +
-    guides(shape = guide_legend(title = 'Learner Status'), colour = guide_legend(title = 'Learner Status')) +
+    guides(shape = guide_legend(title = "Learner Status"), colour = guide_legend(title = "Learner Status")) +
     labs(
-      x = 'Iteration',
-      y = 'Accuracy test mean',
-      title = glue::glue('Random search iteration for training {.task_name}')
+      x = "Iteration",
+      y = "Accuracy test mean",
+      title = glue::glue("Random search iteration for training {.task_name}")
     )
   ggsave(
-    filename = glue::glue('01-Tune-parameter-{.task_name}.pdf'),
+    filename = glue::glue("01-Tune-parameter-{.task_name}.pdf"),
     plot = .plot_hpe,
-    device = 'pdf',
+    device = "pdf",
     path = "data/output",
     width = 8,
     height = 4
@@ -123,7 +123,7 @@ fn_auc_ci <- function(.p) {
   .prob <- mlr::getPredictionProbabilities(pred = .p)
   .roc <- pROC::roc(response = .truth, predictor = .prob, plot = FALSE, ci = TRUE)
   .ci <- as.numeric(.roc$ci)
-  names(.ci) <- c('lower', 'auc', 'upper')
+  names(.ci) <- c("lower", "auc", "upper")
   .data <- data.frame(
     fpr = 1 - .roc$specificities,
     tpr = .roc$sensitivities
@@ -155,10 +155,9 @@ fn_roc_95ci <- function(.p) {
     tnr = list(unlist(.rocm_epi$rval$sp)),
     ppv = list(unlist(.rocm_epi$rval$ppv)),
     npv = list(unlist(.rocm_epi$rval$npv)),
-    kappa = .kappa_f1['kappa'],
-    f1 = .kappa_f1['f1']
+    kappa = .kappa_f1["kappa"],
+    f1 = .kappa_f1["f1"]
   )
-
 }
 
 
@@ -167,7 +166,7 @@ fn_predidct_performance_metrics <- function(.x, .model, .task, .samples) {
     object = .model,
     task = .task,
     subset = .samples[[.x]]
-    )
+  )
 
   .pred_perf <- mlr::generateThreshVsPerfData(
     obj = .pred,
@@ -181,10 +180,15 @@ fn_predidct_performance_metrics <- function(.x, .model, .task, .samples) {
   .pred_metrics <- fn_roc_95ci(.pred) %>%
     dplyr::mutate_if(
       .predicate = rlang::is_list,
-      .funs = ~purrr::map(.x = ., .f = function(.x) {glue::glue('{sprintf("%.3f", .x[1])} ({sprintf("%.3f", .x[2])} - {sprintf("%.3f", .x[3])})')})) %>%
+      .funs = ~ purrr::map(.x = ., .f = function(.x) {
+        glue::glue('{sprintf("%.3f", .x[1])} ({sprintf("%.3f", .x[2])} - {sprintf("%.3f", .x[3])})')
+      })
+    ) %>%
     dplyr::mutate_if(
       .predicate = rlang::is_double,
-      .funs = ~purrr::map(.x = ., .f = function(.x) {sprintf("%.3f", .x)})
+      .funs = ~ purrr::map(.x = ., .f = function(.x) {
+        sprintf("%.3f", .x)
+      })
     ) %>%
     dplyr::mutate_if(
       .predicate = rlang::is_list,
@@ -192,7 +196,7 @@ fn_predidct_performance_metrics <- function(.x, .model, .task, .samples) {
     ) %>%
     tibble::add_column(cohort = .x, .before = 1)
 
-  names(.pred_metrics)  <- c("cohort", "AUC (95% CI)", 'Accuracy (95% CI)', 'SN (95% CI)', 'SP (95% CI)', 'PPV (95% CI)', 'NPV (95% CI)', 'Kappa', 'F1')
+  names(.pred_metrics) <- c("cohort", "AUC (95% CI)", "Accuracy (95% CI)", "SN (95% CI)", "SP (95% CI)", "PPV (95% CI)", "NPV (95% CI)", "Kappa", "F1")
   list(
     perf = .pred_perf,
     metrics = .pred_metrics
@@ -211,7 +215,7 @@ fn_performance <- function(.model, .list) {
     .task = .task,
     .samples = .samples
   ) ->
-    .perf
+  .perf
 
   names(.perf) <- names(.samples)
   .perf
@@ -225,12 +229,11 @@ fn_get_metrics <- function(.perf) {
 
 
 fn_get_auc_plot <- function(.perf, .metrics) {
-
   .metrics %>%
     dplyr::mutate(auc = gsub(pattern = " ", replacement = "", x = `AUC (95% CI)`)) %>%
     dplyr::select(cohort, auc) %>%
     dplyr::mutate(label = glue::glue("{cohort} {auc}")) ->
-    .labels
+  .labels
 
   .d <- .perf %>%
     purrr::map("perf") %>%
@@ -238,7 +241,6 @@ fn_get_auc_plot <- function(.perf, .metrics) {
     dplyr::mutate(cohort = factor(x = cohort, levels = .labels$cohort))
 
   fn_plot_auc(.d, .labels)
-
 }
 
 fn_get_merge_plots <- function(.list, .datasets) {
@@ -249,7 +251,7 @@ fn_get_merge_plots <- function(.list, .datasets) {
   purrr::map2_df(
     .x = list("CA125", "THPOC", "THPOC + CA125"),
     .y = list(.ca125, .panel, .panel_ca125),
-    .f = function(.x,.y) {
+    .f = function(.x, .y) {
       .y %>%
         purrr::map("perf") %>%
         dplyr::bind_rows() %>%
@@ -258,16 +260,15 @@ fn_get_merge_plots <- function(.list, .datasets) {
         dplyr::select(-threshold)
     }
   ) ->
-    .merge_data
+  .merge_data
 
   purrr::map(
     .x = .datasets,
     .f = fn_plot_merge_auc,
     .d = .merge_data
   ) ->
-    .plots
+  .plots
 
   names(.plots) <- .datasets
   .plots
 }
-
