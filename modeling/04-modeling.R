@@ -83,75 +83,6 @@ fn_tune_hyper_parameters <- function(.list) {
 
 }
 
-fn_performance <- function(.model, .list) {
-  .task <- .list$task
-  .samples <- .list$samples
-
-  purrr::map(
-    names(.samples),
-    fn_predidct_performance_metrics,
-    .model = .model,
-    .task = .task,
-    .samples = .samples
-  ) ->
-    .perf
-
-  names(.perf) <- names(.samples)
-  .perf
-}
-
-fn_get_metrics <- function(.perf) {
-  .perf %>%
-    purrr::map("metrics") %>%
-    purrr::reduce(.f = dplyr::bind_rows)
-}
-
-fn_get_auc_plot <- function(.perf, .metrics) {
-
-  .metrics %>%
-    dplyr::mutate(auc = gsub(pattern = " ", replacement = "", x = `AUC (95% CI)`)) %>%
-    dplyr::select(cohort, auc) %>%
-    dplyr::mutate(label = glue::glue("{cohort} {auc}")) ->
-    .labels
-
-  .d <- .perf %>%
-    purrr::map("perf") %>%
-    purrr::reduce(.f = dplyr::bind_rows) %>%
-    dplyr::mutate(cohort = factor(x = cohort, levels = .labels$cohort))
-
-  fn_plot_auc(.d, .labels)
-
-}
-
-fn_get_merge_plots <- function(.panel, .ca125, .panel_ca125) {
-  # .panel <- panel.performance
-  # .ca125 <- ca125.performance
-  # .panel_ca125 <- panel_ca125.performance
-
-  purrr::map2_df(
-    .x = list("CA125", "THPOC", "THPOC + CA125"),
-    .y = list(.ca125, .panel, .panel_ca125),
-    .f = function(.x,.y) {
-      .y %>%
-        purrr::map("perf") %>%
-        dplyr::bind_rows() %>%
-        dplyr::mutate(type = .x) %>%
-        dplyr::filter(cohort != "Tom") %>%
-        dplyr::select(-threshold)
-    }
-  ) ->
-    .merge_data
-
-  purrr::map(
-    .x = list("TC", "DC", "VC1", "VC2"),
-    .f = fn_plot_merge_auc,
-    .d = .merge_data
-  ) ->
-    .plots
-
-  names(.plots) <- list("TC", "DC", "VC1", "VC2")
-  .plots
-}
 
 fn_get_tom_plot <- function(.perf) {
   .legend_title <- glue::glue("AUC for Tom")
@@ -248,7 +179,14 @@ fn_save_auc(.filename = "panel_ca125.aucplot.pdf", .plot = panel_ca125.plot)
 
 # Merge plot --------------------------------------------------------------
 
-merge_plots <- fn_get_merge_plots(.panel = panel.performance, .ca125 = ca125.performance, .panel_ca125 = panel_ca125.performance)
+merge_plots <- fn_get_merge_plots(
+  .list = list(
+    "panel" = list(panel.performance),
+    "ca125" = list(ca125.performance),
+    "panel_ca125" = list(panel_ca125.performance)
+  ),
+  .datasets = list("TC", "DC", "VC1", "VC2")
+  )
 
 purrr::walk2(
   .x = list("TC", "DC", "VC1", "VC2"),
