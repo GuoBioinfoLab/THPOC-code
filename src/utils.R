@@ -57,7 +57,7 @@ fn_remove_unwanted_variables <- function(.se, .vars = c("cohort", "age", "lib.si
   .vars <- if (!"class" %in% .vars) c(.vars, "class") else .vars
   .mod <- model.matrix(~class, data = .se@colData)
   .mod0 <- model.matrix(~1, data = .se@colData)
-  .svobj <- sva(dat = assay(.se), mod = .mod, mod0 = .mod0, n.sv = 100)
+  .svobj <- sva(dat = assay(.se), mod = .mod, mod0 = .mod0, n.sv = 200)
 
   .matrix_w_corr_vars <- foreach(i = 1:ncol(.svobj$sv), .combine = rbind, .packages = c("magrittr")) %dopar% {
     .vars %>%
