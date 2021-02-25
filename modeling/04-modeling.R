@@ -83,7 +83,6 @@ fn_tune_hyper_parameters <- function(.list) {
 
 }
 
-
 fn_get_tom_plot <- function(.perf) {
   .legend_title <- glue::glue("AUC for Tom")
   .legend_text <- .perf %>%
@@ -209,3 +208,5 @@ fn_save_auc(
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/04-modeling.rda")
+
+
