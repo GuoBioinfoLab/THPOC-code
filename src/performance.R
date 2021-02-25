@@ -240,3 +240,34 @@ fn_get_auc_plot <- function(.perf, .metrics) {
   fn_plot_auc(.d, .labels)
 
 }
+
+fn_get_merge_plots <- function(.list, .datasets) {
+  .panel <- .list$panel$performance
+  .panel_ca125 <- .list$panel_ca125$performance
+  .ca125 <- .list$ca125$performance
+
+  purrr::map2_df(
+    .x = list("CA125", "THPOC", "THPOC + CA125"),
+    .y = list(.ca125, .panel, .panel_ca125),
+    .f = function(.x,.y) {
+      .y %>%
+        purrr::map("perf") %>%
+        dplyr::bind_rows() %>%
+        dplyr::mutate(type = .x) %>%
+        dplyr::filter(cohort != "Tom") %>%
+        dplyr::select(-threshold)
+    }
+  ) ->
+    .merge_data
+
+  purrr::map(
+    .x = .datasets,
+    .f = fn_plot_merge_auc,
+    .d = .merge_data
+  ) ->
+    .plots
+
+  names(.plots) <- .datasets
+  .plots
+}
+
