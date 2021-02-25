@@ -32,11 +32,11 @@ fn_select_features <- function(.wt) {
     data = .df,
     method = "glmnet",
     family = "binomial",
-    trainControl = caret::trainControl("cv", number = 10),
-    tuneGrid =  expand.grid(
-      alpha = 1,
-      lambda = 10^seq(-3, 3,length = 100)
-    )
+    trainControl = caret::trainControl("cv", number = 10)
+    # tuneGrid =  expand.grid(
+    #   alpha = 1,
+    #   lambda = 10^seq(-3, 3,length = 100)
+    # )
   )
 
   fn_parallel_stop()
