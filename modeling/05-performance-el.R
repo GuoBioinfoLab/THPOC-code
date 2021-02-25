@@ -54,23 +54,36 @@ fn_get_el_task <- function(.list, .w) {
 
   .list.panel.samples <- .list$panel$samples %>% purrr::reduce(.f = c)
   .list$panel$samples <- list(
-    early = .list.panel.samples[.benign_early],
-    late = .list.panel.samples[.benign_late]
+    Early = .list.panel.samples[.benign_early],
+    Late = .list.panel.samples[.benign_late]
   )
 
   .list.ca125.samples <- .list$ca125$samples %>% purrr::reduce(c)
   .list$ca125$samples <- list(
-    early = .list.ca125.samples[.benign_early],
-    late = .list.ca125.samples[.benign_late]
+    Early = .list.ca125.samples[.benign_early],
+    Late = .list.ca125.samples[.benign_late]
   )
   .list$panel_ca125$samples <- list(
-    early = .list.ca125.samples[.benign_early],
-    late = .list.ca125.samples[.benign_late]
+    Early = .list.ca125.samples[.benign_early],
+    Late = .list.ca125.samples[.benign_late]
   )
 
   .list
 }
 
+fn_performance_el <- function(.x, .y) {
+
+  .perf <- fn_performance(.x, .y)
+  .metrics <- fn_get_metrics(.perf)
+  .plot <- fn_get_auc_plot(.perf, .metrics)
+
+  list(
+    performance = .perf,
+    metrics = .metrics,
+    plot = .plot
+  )
+
+}
 
 # Prepare tasks -----------------------------------------------------------
 el.task <- fn_get_el_task(
@@ -81,13 +94,43 @@ readr::write_rds(x = el.panel.task, file = "data/rda/el.task.rds.gz", compress =
 
 # Performance -------------------------------------------------------------
 
-el.performance <- fn_performance(.model = panel.model, .list = el.task$panel)
-el.metrics <- fn_get_metrics(.perf = el.performance)
-el.plot <- fn_get_auc_plot(.perf = el.performance, .metrics = el.metrics)
+purrr::map2(
+  .x = list(panel.model, panel_ca125.model, ca125.model),
+  .y = el.task,
+  .f = fn_performance_el
+) ->
+  el.performance
 
-el.performance <- fn_performance(.model = ca125.model, .list = el.task$ca125)
-el.metrics <- fn_get_metrics(.perf = el.performance)
-el.plot <- fn_get_auc_plot(.perf = el.performance, .metrics = el.metrics)
+names(el.performance) <- c("panel", "panel_ca125", "ca125")
+readr::write_rds(x = el.performance, file = "data/rda/el.performance.rds.gz", compress = "gz")
+
+# save metrics and plot
+purrr::walk2(
+  .x = list("panel", "panel_ca125", "ca125"),
+  .y = el.performance,
+  .f = function(.x, .y) {
+    readr::write_tsv(x = .y$metrics, file = glue::glue("data/output/el.{.x}.metrics.tsv"))
+    writexl::write_xlsx(x = .y$metrics, path = glue::glue("data/output/el.{.x}.metrics.xlsx"))
+    fn_save_auc(.filename = glue::glue("el.{.x}.aucplot.pdf"), .plot = .y$plot)
+  }
+)
+
+# Merge plot --------------------------------------------------------------
+merge_plots <- fn_get_merge_plots (
+  .list = el.performance,
+  .datasets = list("Early", "Late")
+  )
+
+purrr::walk2(
+  .x = list("Early", "Late"),
+  .y = merge_plots,
+  .f = function(.x, .y) {
+    fn_save_auc(
+      .filename = glue::glue("EL-{.x}-auc-merge.pdf"),
+      .plot = .y
+    )
+  }
+)
 
 # Save image --------------------------------------------------------------
 
