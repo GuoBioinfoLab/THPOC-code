@@ -11,7 +11,7 @@ source(file = "src/utils.R")
 # Function ----------------------------------------------------------------
 
 fn_filter_samples_by_mapped_reads <- function(.se) {
-  .lgl <- .se$`__mapped_reads` > 5e6
+  .lgl <- .se$`__mapped_reads` > 5e6 & .se$mapping_rate >= 0.4
   .se[, .lgl]
 }
 
