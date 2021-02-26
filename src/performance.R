@@ -31,9 +31,11 @@ fn_se2task_panel_ca125 <- function(.se) {
     target = "class",
     positive = "M"
   )
-  .task_ca125 <- mlr::subsetTask(
-    task = .task_panel_ca125,
-    features = "CA125"
+  .task_ca125 <- mlr::makeClassifTask(
+    id = "CA125-task",
+    data = .d[, c("class", "CA125")],
+    target = "class",
+    positive = "M"
   )
   list(
     task_panel_ca125 = .task_panel_ca125,
@@ -50,7 +52,7 @@ fn_task_ind <- function(.x, .se) {
 
 fn_tune_model <- function(.tsk) {
   set.seed(123)
-  .cv10d <- mlr::makeResampleDesc(method = "CV", iters = 10, stratify = TRUE)
+  .cv10d <- mlr::makeResampleDesc(method = "CV", iters = 5, stratify = TRUE)
   .cv10i <- mlr::makeResampleInstance(desc = .cv10d, task = .tsk)
   .learner <- mlr::makeLearner(
     cl = "classif.ksvm",
@@ -69,12 +71,11 @@ fn_tune_model <- function(.tsk) {
     on.learner.error = "warn",
     on.measure.not.applicable = "warn"
   )
-
   parallelMap::parallelStart(mode = "multicore", cpus = 100)
   .tune_result <- mlr::tuneParams(
     learner = .learner, task = .tsk,
     resampling = .cv10i,
-    measures = list(mlr::auc, mlr::mmce, mlr::acc),
+    measures = list(mlr::acc, mlr::mmce, mlr::auc),
     par.set = .hyperparameters,
     control = .tune_algorithm
   )
@@ -94,7 +95,7 @@ fn_plot_tune_path <- function(.tune_result, .task_id) {
 
   .plot_hpe <- mlr::plotHyperParsEffect(
     hyperpars.effect.data = .hped,
-    x = "iteration", y = "auc.test.mean",
+    x = "iteration", y = "acc.test.mean",
     plot.type = "line"
   ) +
     theme_bw() +
@@ -256,7 +257,7 @@ fn_get_merge_plots <- function(.list, .datasets) {
         purrr::map("perf") %>%
         dplyr::bind_rows() %>%
         dplyr::mutate(type = .x) %>%
-        dplyr::filter(cohort != "Tom") %>%
+        # dplyr::filter(cohort != "Tom") %>%
         dplyr::select(-threshold)
     }
   ) ->

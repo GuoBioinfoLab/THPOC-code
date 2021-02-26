@@ -1,4 +1,4 @@
-fn_auc_theme <- function() {
+fn_auc_theme <- function(.legend.position = c(0.8, 0.2)) {
 
   theme(
     panel.background = element_rect(fill = NA),
@@ -11,7 +11,7 @@ fn_auc_theme <- function() {
     axis.text = element_text(color = 'black', size = 14),
     axis.title = element_text(color = 'black', size = 18),
 
-    legend.position = c(0.78, 0.2),
+    legend.position = .legend.position,
     legend.background = element_rect(fill = NA),
     legend.key = element_rect(fill = NA),
     legend.text = element_text(size = 16),
@@ -27,6 +27,9 @@ fn_auc_theme <- function() {
 
 
 fn_plot_auc <- function(.d, .labels) {
+  .lgl <-  any(grepl(pattern = "-", .labels$label))
+  .legend.position <- if(.lgl) c(0.5, 0.5) else c(0.8, 0.2)
+
   .d %>%
     ggplot(aes(x = fpr, y = tpr, color = cohort)) +
     geom_path(size = 1) +
@@ -42,7 +45,7 @@ fn_plot_auc <- function(.d, .labels) {
       x = "1 - Specificity",
       y = "Sensitivity"
     ) +
-    fn_auc_theme()
+    fn_auc_theme(.legend.position)
 
 }
 
@@ -104,3 +107,40 @@ fn_save_auc <- function(.filename, .plot) {
 }
 
 
+
+fn_get_tom_plot <- function(.perf) {
+  .legend_title <- glue::glue("AUC for Tom")
+  .legend_text <- .perf %>%
+    dplyr::mutate(auc_label = round(auc, digits = 3)) %>%
+    dplyr::distinct(auc_label) %>%
+    dplyr::pull(auc_label)
+  .legend_color <- "#B22222"
+
+  .perf %>%
+    ggplot(aes(x = fpr, y = tpr, color = cohort)) +
+    geom_path(size = 0.8) +
+    scale_x_continuous(
+      breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1.0),
+      limits = c(0, 1), expand = c(0, 0)
+    ) +
+    scale_y_continuous(
+      breaks = c(0, 0.2, 0.4, 0.6, 0.8, 1.0),
+      limits = c(0, 1),
+      expand = c(0, 0)
+    ) +
+    scale_color_manual(
+      name = .legend_title,
+      labels = .legend_text,
+      values = .legend_color
+    ) +
+    guides(
+      color = guide_legend(
+        reverse = TRUE
+      )
+    ) +
+    labs(
+      x = "1 - Specificity",
+      y = "Sensitivity"
+    ) +
+    fn_auc_theme()
+}

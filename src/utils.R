@@ -57,7 +57,7 @@ fn_remove_unwanted_variables <- function(.se, .vars = c("cohort", "age", "lib.si
   .vars <- if (!"class" %in% .vars) c(.vars, "class") else .vars
   .mod <- model.matrix(~class, data = .se@colData)
   .mod0 <- model.matrix(~1, data = .se@colData)
-  .svobj <- sva(dat = assay(.se), mod = .mod, mod0 = .mod0, n.sv = 200)
+  .svobj <- sva(dat = assay(.se), mod = .mod, mod0 = .mod0, n.sv = 100)
 
   .matrix_w_corr_vars <- foreach(i = 1:ncol(.svobj$sv), .combine = rbind, .packages = c("magrittr")) %dopar% {
     .vars %>%
@@ -107,7 +107,7 @@ fn_remove_unwanted_variables <- function(.se, .vars = c("cohort", "age", "lib.si
 
   confounding$na <- unname(which(is.na(.matrix_w_corr_vars[, "verdict"])))
 
-  confounding$confounding <- setdiff(1:ncol(.svobj$sv), c(confounding$class, confounding$na))
+  confounding$confounding <- setdiff(1:ncol(.svobj$sv), c(confounding$class))
 
   .data_rm_be <- removeBatchEffect(assay(.se), design = .mod, covariates = .svobj$sv[, confounding$confounding])
 
