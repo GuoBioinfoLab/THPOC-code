@@ -42,7 +42,7 @@ fn_get_task_panel_ca125 <- function(.t, .w, .wt, .panel) {
   # .panel <- panel
   .w@colData %>%
     as.data.frame() %>%
-    # dplyr::mutate(a = ifelse(oc == "OC521", "TC", "Others")) %>%
+    dplyr::filter(barcode %in% .wt$barcode) %>%
     dplyr::group_by(oc) %>%
     dplyr::mutate(ca125 = scale(log2(CA125))[, 1]) %>%
     dplyr::ungroup() ->
