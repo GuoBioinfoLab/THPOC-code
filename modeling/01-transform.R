@@ -4,6 +4,11 @@
 library(magrittr)
 library(DESeq2)
 
+# Arguments ---------------------------------------------------------------
+
+
+args <- commandArgs(TRUE)
+cutoff <- ifelse(is.na(args[1]), 0.3, as.numeric(args[1]))
 
 # src ---------------------------------------------------------------------
 source(file = "src/utils.R")
@@ -11,7 +16,7 @@ source(file = "src/utils.R")
 # Function ----------------------------------------------------------------
 
 fn_filter_samples_by_mapped_reads <- function(.se) {
-  .lgl <- .se$`__mapped_reads` > 5e6
+  .lgl <- .se$`__mapped_reads` > 5e6 & .se$mapping_rate >= cutoff
   .se[, .lgl]
 }
 
