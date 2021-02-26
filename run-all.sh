@@ -7,15 +7,36 @@
 # Number of input parameters
 
 # jrocker ex 8686
-cd /home/liucj/github/THPOC-code
-echo "Workcing dir $PWD in docker container ${HOSTNAME}"
 
-for r in `ls modeling/*.R`;
+root_dir=/home/liucj/github/THPOC-code
+cutoff_dir=/home/liucj/tmp/THPOC-cutoff
+data_dir=/workspace/liucj/project/09-THPOC
+cd ${root_dir}
+
+
+function fn_run_modeling {
+  cf=$1
+  for r in `ls modeling/*.R`;
+  do
+
+    logname=`basename ${r}`
+    echo "Start running ${r} ${cf}."
+    cmd="Rscript ${r} ${cf} 1> data/logs/${logname}.log 2> data/logs/${logname}.err"
+    eval ${cmd}
+    # echo ${cmd}
+    echo "${r} running done."
+  done
+}
+
+
+for cutoff in `seq 0.3 0.01 0.5`;
 do
+  rm ${root_dir}/data
+  mkdir -p ${cutoff_dir}/${cutoff}/{logs,output,rda}
+  ln -sf ${cutoff_dir}/${cutoff} ${root_dir}/data
+  ln -sf ${data_dir}/rda/wuhan.se.rds.gz ${root_dir}/data/rda/wuhan.se.rds.gz
+  ln -sf ${data_dir}/rda/tom.se.rds.gz ${root_dir}/data/rda/tom.se.rds.gz
 
-  logname=`basename ${r}`
-  echo "Start running ${r}."
-  cmd="Rscript ${r} 1> logs/${logname}.log 2> logs/${logname}.err"
-  eval ${cmd}
-  echo "${r} running done."
+  fn_run_modeling ${cutoff}
 done
+
