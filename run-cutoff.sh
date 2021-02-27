@@ -32,6 +32,7 @@ function fn_run_modeling {
 for cutoff in `seq 0.3 0.01 0.5`;
 do
   rm ${root_dir}/data
+  rm -rf ${cutoff_dir}/${cutoff}
   mkdir -p ${cutoff_dir}/${cutoff}/{logs,output,rda}
   ln -sf ${cutoff_dir}/${cutoff} ${root_dir}/data
   ln -sf ${data_dir}/rda/wuhan.se.rds.gz ${root_dir}/data/rda/wuhan.se.rds.gz
