@@ -44,7 +44,10 @@ fn_perf <- function(.x, .y) {
   # .rms <- c("TR4299-OVA-CATH","TR3664-OVA-CATH","TR4294-OVA-CATH","TR4300-OVA-CATH","TR4010-OVA-GDANSK")
   # .rms <- c("TR3664-OVA-CATH","TR4294-OVA-CATH")
   # .rms <- c("TR3664-OVA-CATH","TR4300-OVA-CATH")
-  .rms <- c()
+  .rms <- c("Cath-Ova-CZE-024-TR2771","TR4320-OVA-GDANSK","TR4377-OVA-GDANSK","TR4379-OVA-GDANSK")
+  .rms <- c("Cath-Ova-CZE-024-TR2771","TR4320-OVA-GDANSK","TR4377-OVA-GDANSK")
+  .rms <- c("Cath-Ova-CZE-024-TR2771")
+  # .rms <- c()
 
   .rm <- setdiff(names(.sample), .rms)
 
@@ -190,6 +193,7 @@ all_predicts_stat %>%
   dplyr::mutate(cutoff = as.numeric(cutoff)) %>%
   dplyr::mutate(predictor = as.factor(predictor)) ->
   all_predicts_stat_d
+
 all_predicts_stat_d %>%
   ggplot(aes(x = cutoff, y = auc, color = predictor))+
   geom_point() +
@@ -225,7 +229,7 @@ merge_plots <- cowplot::plot_grid(
   ncol = 1,
   align = 'v',
   rel_heights = c(1,1)
-)
+);merge_plots
 
 ggsave(
   filename = "mergeplots1.pdf",
