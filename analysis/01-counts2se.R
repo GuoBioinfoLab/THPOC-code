@@ -80,3 +80,4 @@ readr::write_rds(x = tom.se, file = "data/rda/tom.se.rds.gz", compress = "gz")
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/01-counts2se.rda")
+load(file = "data/rda/01-counts2se.rda")
