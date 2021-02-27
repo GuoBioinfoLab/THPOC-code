@@ -15,6 +15,7 @@ source(file = "src/performance.R")
 source(file = "src/plots.R")
 
 # Load data ---------------------------------------------------------------
+
 wuhan.se <- readr::read_rds(file = "data/rda/wuhan.se.rds.gz")
 tom.se <- readr::read_rds(file = "data/rda/tom.se.rds.gz")
 wuhan.tom.fs.fg.norm.rbe.se <- readr::read_rds(file = "data/rda/wuhan.tom.fs.fg.norm.rbe.se.rds.gz")
