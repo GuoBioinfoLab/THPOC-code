@@ -75,3 +75,4 @@ readr::write_rds(x = wuhan.tom.fs.fg.norm.se, file = "data/rda/wuhan.tom.fs.fg.n
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/01-transform.rda")
+load("data/rda/01-transform.rda")
