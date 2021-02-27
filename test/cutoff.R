@@ -293,3 +293,8 @@ wuhan.se@colData %>%
 dplyr::bind_rows(.tom_d, .wuhan_d) %>%
   ggplot(aes(x = cohort, y = ca125, color = class)) +
   geom_boxplot()
+
+
+# Save image --------------------------------------------------------------
+
+save.image(file = "data/rda/cutoff.rds.gz")
