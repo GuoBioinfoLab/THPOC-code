@@ -64,14 +64,14 @@ fn_tune_model <- function(.tsk) {
     ParamHelpers::makeNumericParam("sigma", lower = -10, upper = 10, trafo = function(x) 10^x)
   )
   .tune_algorithm <- mlr::makeTuneControlRandom(
-    same.resampling.instance = TRUE, maxit = 50L
+    same.resampling.instance = TRUE, maxit = 100L
   )
   mlr::configureMlr(
     show.info = FALSE,
     on.learner.error = "warn",
     on.measure.not.applicable = "warn"
   )
-  parallelMap::parallelStart(mode = "multicore", cpus = 50)
+  parallelMap::parallelStart(mode = "multicore", cpus = 100)
   .tune_result <- mlr::tuneParams(
     learner = .learner, task = .tsk,
     resampling = .cv10i,
