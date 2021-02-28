@@ -25,20 +25,20 @@ fn_select_features <- function(.wt) {
 
   .df <- fn_se2df(.se = .se[.feats1, ])
 
-  fn_parallel_start(n_cores = 50)
   set.seed(1234)
+
+  fn_parallel_start(n_cores = 50)
   .glm <- caret::train(
     class ~ .,
     data = .df,
     method = "glmnet",
     family = "binomial",
-    trainControl = caret::trainControl("cv", number = 10),
+    trainControl = caret::trainControl("cv", number = 5),
     tuneGrid =  expand.grid(
       alpha = 1,
       lambda = 10^seq(-3, 3,length = 100)
     )
   )
-
   fn_parallel_stop()
 
   coef(.glm$finalModel, .glm$bestTune$lambda) %>%
@@ -61,3 +61,4 @@ readr::write_rds(x = panel, file = "data/rda/panel.rds.gz", compress = "gz")
 # Save .image -------------------------------------------------------------
 save.image(file = "data/rda/03-feature-selection.rda")
 
+load(file = "data/rda/03-feature-selection.rda")
