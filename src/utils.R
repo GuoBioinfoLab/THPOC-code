@@ -107,7 +107,7 @@ fn_remove_unwanted_variables <- function(.se, .vars = c("cohort", "age", "lib.si
 
   confounding$na <- unname(which(is.na(.matrix_w_corr_vars[, "verdict"])))
 
-  confounding$confounding <- setdiff(1:ncol(.svobj$sv), c(confounding$class))
+  confounding$confounding <- setdiff(1:ncol(.svobj$sv), c(confounding$class, confounding$na))
 
   .data_rm_be <- removeBatchEffect(assay(.se), design = .mod, covariates = .svobj$sv[, confounding$confounding])
 
