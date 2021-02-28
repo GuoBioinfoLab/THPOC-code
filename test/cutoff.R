@@ -295,6 +295,28 @@ dplyr::bind_rows(.tom_d, .wuhan_d) %>%
   geom_boxplot()
 
 
+
+
+list.files(path = path_tmp) %>%
+  tibble::enframe(value = "cutoff") %>%
+  dplyr::select(-name) %>%
+  dplyr::filter(!grepl(pattern = "merge", x = cutoff)) %>%
+  dplyr::mutate(panel = purrr::map(.x = cutoff, .f = function(.x) {
+    .filepath <- file.path(path_tmp, .x, "rda", "panel.rds.gz")
+    .panel <- readr::read_rds(file = .filepath)
+  })) %>%
+  dplyr::mutate(n = purrr::map_int(.x = panel, .f = length)) ->
+  panels
+
+panels %>%
+  dplyr::mutate(cutoff = as.numeric(cutoff)) %>%
+  ggplot(aes(x = cutoff, y = n)) +
+  geom_point()
+
+panels$panel %>%
+  purrr::reduce(.f = intersect)
+
+readr::read_rds(file = "data/rda/panel.rds.gz") -> .dd
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/cutoff.rds.gz")
