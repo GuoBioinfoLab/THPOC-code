@@ -131,6 +131,11 @@ purrr::walk2(
   }
 )
 
+# Merge metrics -----------------------------------------------------------
+
+merge_metrics <- fn_get_merge_metrics(.list = epi.performance)
+readr::write_tsv(x = merge_metrics, file = glue::glue("data/output/EPI-metrics-merge.tsv"))
+writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/output/EPI-metrics-merge.xlsx"))
 
 # Save image --------------------------------------------------------------
 

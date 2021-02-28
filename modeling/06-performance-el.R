@@ -134,6 +134,12 @@ purrr::walk2(
   }
 )
 
+# Merge metrics -----------------------------------------------------------
+
+merge_metrics <- fn_get_merge_metrics(.list = el.performance)
+readr::write_tsv(x = merge_metrics, file = glue::glue("data/output/EL-metrics-merge.tsv"))
+writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/output/EL-metrics-merge.xlsx"))
+
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/06-performance-el.rda")

@@ -116,6 +116,12 @@ purrr::walk2(
   }
 )
 
+# Merge metrics -----------------------------------------------------------
+
+merge_metrics <- fn_get_merge_metrics(.list = endo.performance)
+readr::write_tsv(x = merge_metrics, file = glue::glue("data/output/Endo-metrics-merge.tsv"))
+writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/output/Endo-metrics-merge.xlsx"))
+
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/08-performance-endo.rda")

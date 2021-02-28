@@ -70,7 +70,7 @@ purrr::walk2(
 )
 
 # Merge plot --------------------------------------------------------------
-merge_plots <- fn_get_merge_plots (
+merge_plots <- fn_get_merge_plots(
   .list = bm.performance,
   .datasets = as.list(names(bm.performance$panel$performance))
 )
@@ -86,12 +86,12 @@ purrr::walk2(
   }
 )
 
-# Plot tom ----------------------------------------------------------------
-# tom_plot <- fn_get_tom_plot(bm.performance$panel$performance$Tom$perf)
-# fn_save_auc(
-#   .filename = glue::glue("BM-Tom-auc-merge.pdf"),
-#   .plot = tom_plot
-# )
+# Merge metrics -----------------------------------------------------------
+
+merge_metrics <- fn_get_merge_metrics(.list = bm.performance)
+readr::write_tsv(x = merge_metrics, file = glue::glue("data/output/BM-metrics-merge.tsv"))
+writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/output/BM-metrics-merge.xlsx"))
+
 
 # Save image --------------------------------------------------------------
 

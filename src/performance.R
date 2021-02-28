@@ -64,14 +64,14 @@ fn_tune_model <- function(.tsk) {
     ParamHelpers::makeNumericParam("sigma", lower = -10, upper = 10, trafo = function(x) 10^x)
   )
   .tune_algorithm <- mlr::makeTuneControlRandom(
-    same.resampling.instance = TRUE, maxit = 100L
+    same.resampling.instance = TRUE, maxit = 50L
   )
   mlr::configureMlr(
     show.info = FALSE,
     on.learner.error = "warn",
     on.measure.not.applicable = "warn"
   )
-  parallelMap::parallelStart(mode = "multicore", cpus = 100)
+  parallelMap::parallelStart(mode = "multicore", cpus = 50)
   .tune_result <- mlr::tuneParams(
     learner = .learner, task = .tsk,
     resampling = .cv10i,
@@ -272,4 +272,15 @@ fn_get_merge_plots <- function(.list, .datasets) {
 
   names(.plots) <- .datasets
   .plots
+}
+
+fn_get_merge_metrics <- function(.list) {
+  .list %>%
+    purrr::map("metrics") %>%
+    tibble::enframe() %>%
+    tidyr::unnest(cols = value) %>%
+    dplyr::mutate(name = plyr::revalue(x = name, replace = c("panel" = "THPOC", "ca125" = "CA125", "panel_ca125" = "THPOC + CA125"))) %>%
+    dplyr::mutate(name = factor(name, levels = c("THPOC", "CA125", "THPOC + CA125"))) %>%
+    dplyr::arrange(cohort, name) %>%
+    dplyr::select(2, 1, 3:10)
 }
