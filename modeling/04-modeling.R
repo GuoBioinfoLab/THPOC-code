@@ -28,7 +28,8 @@ fn_get_task_panel <- function(.wt, .panel) {
   .task <- fn_se2task_panel(.se = .se, .id = "Panel-task")
 
   .datasets <- list("TC", "DC", "VC1", "VC2", "Tom")
-  .samples <- .datasets %>% purrr::map(.f = fn_task_ind, .se = .se)
+  .samples <- .datasets %>%
+    purrr::map(.f = fn_task_ind, .se = .se)
   names(.samples) <- .datasets
 
   list(
@@ -128,5 +129,5 @@ readr::write_rds(x = panel_ca125.model, file = "data/rda/panel_ca125.model.rds.g
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/04-modeling.rda")
-
+load(file = "data/rda/04-modeling.rda")
 
