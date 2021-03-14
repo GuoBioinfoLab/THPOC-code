@@ -73,7 +73,6 @@ fn_get_el_task <- function(.list, .w, .t) {
     Early = .list.panel.samples[.benign_early] %>% na.omit() %>% c(),
     Late = .list.panel.samples[.benign_late] %>% na.omit() %>% c()
   )
-
   .list.ca125.samples <- .list$ca125$samples %>% purrr::reduce(c)
   .list$ca125$samples <- list(
     Early = .list.ca125.samples[.benign_early] %>% na.omit() %>% c(),
