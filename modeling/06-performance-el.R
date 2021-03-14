@@ -28,23 +28,39 @@ panel_ca125.model <- readr::read_rds(file = "data/rda/panel_ca125.model.rds.gz")
 
 # Function ----------------------------------------------------------------
 
-fn_get_el_task <- function(.list, .w) {
+fn_get_el_task <- function(.list, .w, .t) {
   .w@colData %>%
     as.data.frame() %>%
     dplyr::filter(oc %in% c("OC44", "OC79", "OC172")) %>%
     dplyr::filter(!is.na(stage)) %>%
-    dplyr::select(barcode, CA125, stage) ->
+    dplyr::select(barcode, stage) ->
     .wd
 
-  .wd %>%
+  .t@colData %>%
+    as.data.frame() %>%
+    dplyr::select(barcode, stageFourGroups) %>%
+    dplyr::mutate(stage = plyr::revalue(x = stageFourGroups, replace = c(
+      "benign" = "B",
+      "healthy control" = "B",
+      "I" = "E",
+      "II" = "E",
+      "III" = "L",
+      "IV" = "L"
+    ))) %>%
+    dplyr::select(barcode, stage) ->
+    .td
+
+  dplyr::bind_rows(.wd, .td) -> .wtd
+
+  .wtd %>%
     dplyr::filter(stage == "B") %>%
     dplyr::pull(barcode) ->
     .benign
-  .wd %>%
+  .wtd %>%
     dplyr::filter(stage == "E") %>%
     dplyr::pull(barcode) ->
     .early
-  .wd %>%
+  .wtd %>%
     dplyr::filter(stage == "L") %>%
     dplyr::pull(barcode) ->
     .late
@@ -54,18 +70,18 @@ fn_get_el_task <- function(.list, .w) {
 
   .list.panel.samples <- .list$panel$samples %>% purrr::reduce(.f = c)
   .list$panel$samples <- list(
-    Early = .list.panel.samples[.benign_early],
-    Late = .list.panel.samples[.benign_late]
+    Early = .list.panel.samples[.benign_early] %>% na.omit() %>% c(),
+    Late = .list.panel.samples[.benign_late] %>% na.omit() %>% c()
   )
 
   .list.ca125.samples <- .list$ca125$samples %>% purrr::reduce(c)
   .list$ca125$samples <- list(
-    Early = .list.ca125.samples[.benign_early],
-    Late = .list.ca125.samples[.benign_late]
+    Early = .list.ca125.samples[.benign_early] %>% na.omit() %>% c(),
+    Late = .list.ca125.samples[.benign_late] %>% na.omit() %>% c()
   )
   .list$panel_ca125$samples <- list(
-    Early = .list.ca125.samples[.benign_early],
-    Late = .list.ca125.samples[.benign_late]
+    Early = .list.ca125.samples[.benign_early] %>% na.omit() %>% c(),
+    Late = .list.ca125.samples[.benign_late] %>% na.omit() %>% c()
   )
 
   .list
@@ -90,7 +106,8 @@ fn_performance_el <- function(.x, .y) {
 
 el.task <- fn_get_el_task(
   .list = c("panel" = list(wuhan.tom.panel.task), wuhan.tom.panel.ca125.task),
-  .w = wuhan.se
+  .w = wuhan.se,
+  .t = tom.se
 )
 readr::write_rds(x = el.task, file = "data/rda/el.task.rds.gz", compress = "gz")
 
