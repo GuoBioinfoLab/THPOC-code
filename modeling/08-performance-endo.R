@@ -35,6 +35,14 @@ fn_get_endo_task <- function(.list, .w, .endo) {
   # .endo = Endometriosis
   #
 
+  # .w@colData %>%
+  #   as.data.frame() %>%
+  #   dplyr::filter(oc %in% c("OC44", "OC79", "OC172")) %>%
+  #   dplyr::select(barcode, class) %>%
+  #   dplyr::mutate(a = barcode %in% .endo & class == "B") %>%
+  #   dplyr::mutate(b = barcode %in% .endo & class == "M") %>%
+  #   dplyr::filter(a == T | b == T) -> .d
+
   .list.panel.samples <- .list$panel$samples %>%
     purrr::reduce(.f = c)
   .list$panel$samples <- list(Endometriosis = .list.panel.samples[.endo])
@@ -125,3 +133,4 @@ writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/output/Endo-metri
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/08-performance-endo.rda")
+load(file = "data/rda/08-performance-endo.rda")
