@@ -109,6 +109,8 @@ fn_remove_unwanted_variables <- function(.se, .vars = c("cohort", "age", "lib.si
 
   confounding$confounding <- setdiff(1:ncol(.svobj$sv), c(confounding$class, confounding$na))
 
+  readr::write_rds(x = list(confounding = confounding,svobj = .svobj,mod = .mod, dbdat = assay(.se)), file = "data/rda/confounding-svobj.rds")
+
   .data_rm_be <- removeBatchEffect(assay(.se), design = .mod, covariates = .svobj$sv[, confounding$confounding])
 
   SummarizedExperiment(assays = .data_rm_be, colData = .se@colData[colnames(.data_rm_be), ])
