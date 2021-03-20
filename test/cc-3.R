@@ -145,3 +145,8 @@ disease_count %>%
 
 perf_disease %>%
   writexl::write_xlsx(path = "data/output/cc-diease-perf.xlsx")
+
+
+# Save --------------------------------------------------------------------
+
+save.image(file = "data/rda/cc-3.rda")
