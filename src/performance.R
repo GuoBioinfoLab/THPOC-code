@@ -168,6 +168,10 @@ fn_predidct_performance_metrics <- function(.x, .model, .task, .samples) {
     task = .task,
     subset = .samples[[.x]]
   )
+  .pred$data %>%
+    tibble::rownames_to_column(var = "barcode") %>%
+    tibble::add_column(cohort = .x, .before = 1) ->
+    .pred_data
 
   .pred_perf <- mlr::generateThreshVsPerfData(
     obj = .pred,
@@ -200,7 +204,8 @@ fn_predidct_performance_metrics <- function(.x, .model, .task, .samples) {
   names(.pred_metrics) <- c("cohort", "AUC (95% CI)", "Accuracy (95% CI)", "SN (95% CI)", "SP (95% CI)", "PPV (95% CI)", "NPV (95% CI)", "Kappa", "F1")
   list(
     perf = .pred_perf,
-    metrics = .pred_metrics
+    metrics = .pred_metrics,
+    pred_data = .pred_data
   )
 }
 
@@ -274,7 +279,56 @@ fn_get_merge_plots <- function(.list, .datasets) {
   .plots
 }
 
+fn_delong_test <- function(.x) {
+  .x %>% dplyr::filter(name == "panel") -> .x.panel
+  .x %>% dplyr::filter(name == "ca125") -> .x.ca125
+  .x %>% dplyr::filter(name == "panel_ca125") -> .x.panel_ca125
+
+  dplyr::bind_rows(
+    pROC::roc.test(
+      pROC::roc(.x.panel$truth, .x.panel$prob.M),
+      pROC::roc(.x.ca125$truth, .x.ca125$prob.M),
+      method = 'delong'
+    ) %>%
+      broom::tidy() %>%
+      dplyr::mutate(`P value` = format(p.value, digits = 3,scientific = TRUE)) %>%
+      dplyr::select(`P value`) %>%
+      tibble::add_column(name = "THPOC", .before = 1),
+    tibble::tibble(name = "CA125", `P value` = "-"),
+    pROC::roc.test(
+      pROC::roc(.x.panel_ca125$truth, .x.panel_ca125$prob.M),
+      pROC::roc(.x.ca125$truth, .x.ca125$prob.M),
+      method = 'delong'
+    ) %>%
+      broom::tidy() %>%
+      dplyr::mutate(`P value` = format(p.value, digits = 3,scientific = TRUE)) %>%
+      dplyr::select(`P value`) %>%
+      tibble::add_column(name = "THPOC + CA125", .before = 1)
+  ) %>%
+    dplyr::mutate(`P value` = gsub(pattern = "e", replacement = "x10^", x = `P value`))
+}
+
 fn_get_merge_metrics <- function(.list) {
+  .list %>%
+    purrr::map(.f = function(.x) {
+      .x$performance %>%
+        purrr::map("pred_data")
+    }) %>%
+    tibble::enframe() %>%
+    tidyr::unnest(value) %>%
+    tidyr::unnest(value) %>%
+    dplyr::group_by(cohort) %>%
+    tidyr::nest() %>%
+    dplyr::ungroup() ->
+    .for_delong_test
+
+  .for_delong_test %>%
+    dplyr::mutate(p.value = purrr::map(.x = data, .f = fn_delong_test)) %>%
+    dplyr::select(-data) %>%
+    tidyr::unnest(p.value) %>%
+    dplyr::mutate(name = factor(name, levels = c("THPOC", "CA125", "THPOC + CA125")))->
+    .pvalue
+
   .list %>%
     purrr::map("metrics") %>%
     tibble::enframe() %>%
@@ -282,5 +336,6 @@ fn_get_merge_metrics <- function(.list) {
     dplyr::mutate(name = plyr::revalue(x = name, replace = c("panel" = "THPOC", "ca125" = "CA125", "panel_ca125" = "THPOC + CA125"))) %>%
     dplyr::mutate(name = factor(name, levels = c("THPOC", "CA125", "THPOC + CA125"))) %>%
     dplyr::arrange(cohort, name) %>%
-    dplyr::select(2, 1, 3:10)
+    dplyr::select(2, 1, 3:10) %>%
+    dplyr::inner_join(.pvalue, by = c("cohort", "name"))
 }
