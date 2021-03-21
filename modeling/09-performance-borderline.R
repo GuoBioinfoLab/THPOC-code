@@ -132,7 +132,7 @@ purrr::walk2(
   .y = merge_plots,
   .f = function(.x, .y) {
     fn_save_auc(
-      .filename = glue::glue("borderline-{.x}-auc-merge.pdf"),
+      .filename = glue::glue("Borderline-{.x}-auc-merge.pdf"),
       .plot = .y
     )
   }
@@ -141,8 +141,8 @@ purrr::walk2(
 # Merge metrics -----------------------------------------------------------
 
 merge_metrics <- fn_get_merge_metrics(.list = borderline.performance)
-readr::write_tsv(x = merge_metrics, file = glue::glue("data/output/borderline-metrics-merge.tsv"))
-writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/output/borderline-metrics-merge.xlsx"))
+readr::write_tsv(x = merge_metrics, file = glue::glue("data/output/Borderline-metrics-merge.tsv"))
+writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/output/Borderline-metrics-merge.xlsx"))
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/09-performance-borderline.rda")
