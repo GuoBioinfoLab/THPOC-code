@@ -96,3 +96,4 @@ writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/output/BM-metrics
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/05-performance-bm.rda")
+load(file = "data/rda/05-performance-bm.rda")
