@@ -128,7 +128,8 @@ dplyr::bind_rows(train.el.epi.ca125, test.el.epi.borderline.endo.ca125) %>%
   dplyr::mutate(CA125 = ifelse(CA125 < -3, -3, CA125)) %>%
   dplyr::distinct() %>%
   dplyr::mutate(group = ifelse(group == "B", "Non-OC", group)) %>%
-  dplyr::mutate(group = factor(x = group, levels = c("Late-stage", "Early-stage", "Epithelial", "Non-epithelial","Endometriosis", "Borderline", "Non-OC"))) ->
+  dplyr::mutate(group = factor(x = group, levels = c("Late-stage", "Early-stage", "Epithelial", "Non-epithelial","Endometriosis", "Borderline", "Non-OC"))) %>%
+  dplyr::filter(group != "Endometriosis") ->
   clean.el.epi.borderline.endo.ca125
 
 clean.el.epi.borderline.endo.ca125 %>%
@@ -164,7 +165,8 @@ clean.el.epi.borderline.endo.ca125 %>%
 
 # Plot --------------------------------------------------------------------
 
-color_epi_lebn <- c('Late stage' = "#e31a1c", 'Early stage' = "#1f78b4", 'Epithelial' = "#399205", 'Non-epithelial' = '#e8a733', "Endometriosis" = "#00FFFF", "Borderline" = "#8A2BE2", 'Non-cancer' = '#000000')
+# color_epi_lebn <- c('Late stage' = "#e31a1c", 'Early stage' = "#1f78b4", 'Epithelial' = "#399205", 'Non-epithelial' = '#e8a733', "Endometriosis" = "#00FFFF", "Borderline" = "#8A2BE2", 'Non-cancer' = '#000000')
+color_epi_lebn <- c('Late stage' = "#e31a1c", 'Early stage' = "#1f78b4", 'Epithelial' = "#399205", 'Non-epithelial' = '#e8a733', "Endometriosis" = "#00FFFF", 'Non-cancer' = '#000000')
 clean.el.epi.borderline.endo.ca125 %>%
   ggplot(aes(x = group, y = CA125, color = group))+
   stat_boxplot(geom = 'errorbar', width = 0.2) +
@@ -180,9 +182,9 @@ clean.el.epi.borderline.endo.ca125 %>%
   ) +
   annotate(
     geom = "text",
-    x = 1:6,
+    x = 1:5,
     y = 3,
-    label = simplify2array(clean.el.epi.borderline.endo.ca125.label$pval_label[1:6])
+    label = simplify2array(clean.el.epi.borderline.endo.ca125.label$pval_label[1:5])
   ) ->
   clean.el.epi.borderline.endo.ca125_plot;clean.el.epi.borderline.endo.ca125_plot
 
