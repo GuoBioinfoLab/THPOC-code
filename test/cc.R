@@ -75,3 +75,4 @@ readr::write_rds(x = cc.se, file = "data/rda/cc.se.rds")
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/cc.rda")
+load(file = "data/rda/cc.rda")

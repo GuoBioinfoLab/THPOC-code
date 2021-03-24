@@ -150,3 +150,4 @@ perf_disease %>%
 # Save --------------------------------------------------------------------
 
 save.image(file = "data/rda/cc-3.rda")
+load(file = "data/rda/cc-3.rda")
