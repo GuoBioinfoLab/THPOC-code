@@ -1,2 +1,2 @@
-# THPOC-code
-Tumor hijacked ovarian cancer code
+# TEPOC-code
+Tumour educated platelet detect ovarian cancer.
