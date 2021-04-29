@@ -43,12 +43,14 @@ fn_get_borderline_task <- function(.list, .w ,.t, .bl) {
     dplyr::filter(oc %in% c("OC44", "OC79", "OC172")) %>%
     dplyr::mutate(name = barcode) %>%
     dplyr::mutate(class = as.character(class)) %>%
+    dplyr::filter(type != "normal") %>%
     dplyr::select(barcode, name, class) ->
     .wd
 
   .t@colData %>%
     as.data.frame() %>%
     dplyr::mutate(class = as.character(class)) %>%
+    dplyr::filter(stageFourGroups != "healthy control") %>%
     dplyr::select(barcode, name, class) ->
     .td
 

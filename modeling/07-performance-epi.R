@@ -33,6 +33,7 @@ fn_get_epi_task <- function(.list, .w) {
     as.data.frame() %>%
     dplyr::filter(oc %in% c("OC44", "OC79", "OC172")) %>%
     dplyr::filter(!is.na(epi.non.epi)) %>%
+    dplyr::mutate(epi.non.epi = ifelse(type == "normal", "Normal", epi.non.epi)) %>%
     dplyr::select(barcode, CA125, epi.non.epi) ->
     .wd
 
