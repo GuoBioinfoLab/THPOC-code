@@ -32,21 +32,22 @@ fn_get_el_task <- function(.list, .w, .t) {
   .w@colData %>%
     as.data.frame() %>%
     dplyr::filter(oc %in% c("OC44", "OC79", "OC172")) %>%
-    dplyr::filter(!is.na(stage)) %>%
+    dplyr::mutate(stage = ifelse(type == "normal", "H", stage)) %>%
     dplyr::select(barcode, stage) ->
     .wd
 
   .t@colData %>%
     as.data.frame() %>%
-    dplyr::select(barcode, stageFourGroups) %>%
+    dplyr::select(barcode, stageFourGroups, Stage) %>%
     dplyr::mutate(stage = plyr::revalue(x = stageFourGroups, replace = c(
       "benign" = "B",
-      "healthy control" = "B",
+      "healthy control" = "H",
       "I" = "E",
       "II" = "E",
       "III" = "L",
       "IV" = "L"
     ))) %>%
+    dplyr::mutate(stage = ifelse(Stage == "IIB", "L", stage)) %>%
     dplyr::select(barcode, stage) ->
     .td
 
