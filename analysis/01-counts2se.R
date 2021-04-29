@@ -67,7 +67,13 @@ readr::write_rds(x = tom_count, file = "data/rda/tom_count.rds.gz", compress = "
 
 # Load meta ---------------------------------------------------------------
 wuhan_meta <- readr::read_rds(file = "data/rda/wuhan_meta.rds.gz")
+wuhan_update_stage <- readxl::read_xlsx(path = "data/raw/wuhan/wuhan-stage.xlsx") %>%
+  dplyr::slice(match(wuhan_meta$barcode, barcode))
+wuhan_meta$figo_stage <- wuhan_update_stage$figo_stage
+
 tom_meta <- readr::read_rds(file = "data/rda/tom_meta.rds.gz")
+
+
 
 
 # Count meta se -----------------------------------------------------------
