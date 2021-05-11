@@ -16,6 +16,34 @@ endo.task <- readr::read_rds(file = "data/rda/endo.task.rds.gz")
 borderline.task <- readr::read_rds(file = "data/rda/borderline.task.rds.gz")
 
 wuhan.se <- readr::read_rds(file = "data/rda/wuhan.se.rds.gz")
+tom.se <- readr::read_rds(file = "data/rda/tom.se.rds.gz")
+wuhan.tom.fs.fg.norm.rbe.se <- readr::read_rds(file = "data/rda/wuhan.tom.fs.fg.norm.rbe.se.rds.gz")
+
+tom.se@colData %>%
+  as.data.frame() %>%
+  dplyr::filter(barcode %in% wuhan.tom.fs.fg.norm.rbe.se$barcode) %>%
+  dplyr::mutate(ca125 = as.numeric(CA125parameterTOC)) %>%
+  dplyr::filter(!is.na(ca125), ca125 > 0) %>%
+  dplyr::mutate(stage = plyr::revalue(x = stageFourGroups, replace = c(
+    "benign" = "B",
+    "healthy control" = "H",
+    "I" = "E",
+    "II" = "E",
+    "III" = "L",
+    "IV" = "L"
+  ))) %>%
+  dplyr::mutate(stage = ifelse(Stage == "IIB", "L", stage)) ->
+  tom_ca125
+
+wuhan.se@colData %>%
+  as.data.frame() %>%
+  dplyr::filter(barcode %in% wuhan.tom.fs.fg.norm.rbe.se$barcode) ->
+  wuhan_ca125
+
+tom_ca125$stage %>% table
+wuhan_ca125$stage %>% table
+setdiff(wuhan.se$barcode, wuhan.tom.fs.fg.norm.rbe.se$barcode)
+#"985C"
 
 panel_ca125.model <- readr::read_rds(file = "data/rda/panel_ca125.model.rds.gz")
 panel <- readr::read_rds(file = "data/rda/panel.rds.gz")
@@ -30,20 +58,22 @@ ca125_data <- mlr::getTaskData(task = el.task$panel_ca125$task) %>%
 
 # Training data -----------------------------------------------------------
 
-
 wuhan.se@colData %>%
   as.data.frame() %>%
   dplyr::filter(oc == "OC521") %>%
-  dplyr::select(barcode, stage, epi.non.epi) ->
+  dplyr::mutate(stage = ifelse(type == "normal", "H", stage)) %>%
+  dplyr::select(barcode, stage, epi.non.epi)  ->
   training_data
 
 training_data %>%
   dplyr::left_join(ca125_data, by = "barcode") %>%
   dplyr::mutate(group = plyr::revalue(x = stage, replace = c(
+    "H" = "H",
     "B" = "B",
     "E" = "Early-stage",
     "L" = "Late-stage"
   ))) %>%
+  dplyr::filter(group != "H") %>%
   dplyr::select(barcode, CA125, group) ->
   train.el.ca125
 
@@ -123,7 +153,16 @@ dplyr::bind_rows(
 
 # merge -------------------------------------------------------------------
 
-dplyr::bind_rows(train.el.epi.ca125, test.el.epi.borderline.endo.ca125) %>%
+dplyr::bind_rows(
+  train.el.epi.ca125,
+  test.el.epi.borderline.endo.ca125
+  ) %>%
+  dplyr::bind_rows(
+    ca125_data %>%
+      dplyr::filter(class != "M") %>%
+      dplyr::mutate(class = as.character(class)) %>%
+      dplyr::rename(group = class)
+  ) %>%
   dplyr::filter(!is.na(CA125)) %>%
   dplyr::mutate(CA125 = ifelse(CA125 < -3, -3, CA125)) %>%
   dplyr::distinct() %>%
