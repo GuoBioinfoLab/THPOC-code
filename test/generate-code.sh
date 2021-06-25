@@ -31,17 +31,17 @@ echo '# LICENSE' >> ${rmd}
 cat ${license} >> ${rmd}
 
 
-srcs=`find ${path_analysis} ${path_modeling} ${path_src} -name "*.R" -type f | sort`
+# srcs=`find ${path_analysis} ${path_modeling} ${path_src} -name "*.R" -type f | sort`
 
-for src in ${srcs[@]};
-do
-  filename=`basename ${src}`
+# for src in ${srcs[@]};
+# do
+#   filename=`basename ${src}`
 
-  header="# Meta info -----------------------------------------------------------------\n\n# @AUTHOR: Chun-Jie Liu\n# @CONTACT: chunjie.sam.liu.at.gmail.com\n# @DATE: 2021-03-1 10:00:58\n# @DESCRIPTION: ${filename}\n"
+#   header="# Meta info -----------------------------------------------------------------\n\n# @AUTHOR: Chun-Jie Liu\n# @CONTACT: chunjie.sam.liu.at.gmail.com\n# @DATE: 2021-03-1 10:00:58\n# @DESCRIPTION: ${filename}\n"
 
-  sed -i "1s/^/${header}/" ${src}
+#   sed -i "1s/^/${header}/" ${src}
 
-done
+# done
 
 srcs=`find ${path_analysis} ${path_modeling} -name "*.R" -type f | sort`
 
