@@ -37,13 +37,15 @@ for src in ${srcs[@]};
 do
   filename=`basename ${src}`
 
-  header="# Meta info -----------------------------------------------------------------\n\n### @AUTHOR: Chun-Jie Liu\n### @CONTACT: chunjie.sam.liu.at.gmail.com\n### @DATE: 2021-03-1 10:00:58\n### @DESCRIPTION: ${filename}\n"
+  header="# Meta info -----------------------------------------------------------------\n\n# @AUTHOR: Chun-Jie Liu\n# @CONTACT: chunjie.sam.liu.at.gmail.com\n# @DATE: 2021-03-1 10:00:58\n# @DESCRIPTION: ${filename}\n"
 
   sed -i "1s/^/${header}/" ${src}
 
 done
 
 srcs=`find ${path_analysis} ${path_modeling} -name "*.R" -type f | sort`
+
+echo '```' >> ${rmd}
 
 for src in ${srcs[@]};
 do
@@ -55,3 +57,4 @@ do
   cat ${src} >> ${rmd}
 done
 
+echo '```' >> ${rmd}
