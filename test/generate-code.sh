@@ -36,12 +36,13 @@ srcs=`find ${path_analysis} ${path_modeling} ${path_src} -name "*.R" -type f | s
 for src in ${srcs[@]};
 do
   filename=`basename ${src}`
+
   echo "
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
 # @DATE: 2021-06-25 10:11:58
 # @DESCRIPTION: ${filename}
-" | cat - ${src}
+" | cat - ${src} > ${src}
 
 done
 
