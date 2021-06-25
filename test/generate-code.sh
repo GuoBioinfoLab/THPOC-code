@@ -37,7 +37,7 @@ for src in ${srcs[@]};
 do
   filename=`basename ${src}`
 
-  header="# @AUTHOR: Chun-Jie Liu\n# @CONTACT: chunjie.sam.liu.at.gmail.com\n# @DATE: 2021-03-1 10:00:58\n# @DESCRIPTION: ${filename}\n"
+  header="### @AUTHOR: Chun-Jie Liu\n### @CONTACT: chunjie.sam.liu.at.gmail.com\n### @DATE: 2021-03-1 10:00:58\n### @DESCRIPTION: ${filename}\n"
 
   sed -i "1s/^/${header}/" ${src}
 
