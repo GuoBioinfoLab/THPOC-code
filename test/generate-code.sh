@@ -43,5 +43,15 @@ do
 
 done
 
+srcs=`find ${path_analysis} ${path_modeling} -name "*.R" -type f | sort`
 
+for src in ${srcs[@]};
+do
+  echo "" >> ${rmd}
+  echo "" >> ${rmd}
+  echo "" >> ${rmd}
+  echo "" >> ${rmd}
+  echo "" >> ${rmd}
+  cat ${src} >> ${rmd}
+done
 
