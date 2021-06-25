@@ -1,3 +1,9 @@
+# Meta info -----------------------------------------------------------------
+
+# @AUTHOR: Chun-Jie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2021-03-1 10:00:58
+# @DESCRIPTION: 05-performance-bm.R
 # Library -----------------------------------------------------------------
 
 library(magrittr)

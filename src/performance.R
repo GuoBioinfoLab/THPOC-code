@@ -1,3 +1,9 @@
+# Meta info -----------------------------------------------------------------
+
+# @AUTHOR: Chun-Jie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2021-03-1 10:00:58
+# @DESCRIPTION: performance.R
 
 
 fn_se2task_panel <- function(.se, .id = "task") {

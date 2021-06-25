@@ -1,3 +1,9 @@
+# Meta info -----------------------------------------------------------------
+
+# @AUTHOR: Chun-Jie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2021-03-1 10:00:58
+# @DESCRIPTION: plots.R
 fn_auc_theme <- function(.legend.position = c(0.8, 0.2)) {
 
   theme(

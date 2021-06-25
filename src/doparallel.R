@@ -1,3 +1,9 @@
+# Meta info -----------------------------------------------------------------
+
+# @AUTHOR: Chun-Jie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2021-03-1 10:00:58
+# @DESCRIPTION: doparallel.R
 library(assertthat)
 # Start
 fn_parallel_start <- function(n_cores = 10) {
