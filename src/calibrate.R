@@ -42,3 +42,73 @@ fn_get_mlr_pred <- function(.x, .y) {
   names(.perf) <- names(.samples)
   .perf
 }
+
+
+#' Generate before calibrate and after calibrate data
+#'
+#' @param .x mlr prediction object
+#' @return list of before and after calibrate
+fn_get_calibrate <- function(.x) {
+  .bc_pred <- .x
+  .bc_auc_brier <- performance(
+    pred = .bc_pred,
+    measures = list(auc, brier)
+  )
+
+  .ac_pred <- .x
+  .ac_pred$data <- fn_platt_scaling(.ac_pred$data)
+  .ac_auc_brier <- performance(
+    pred = .ac_pred,
+    measures = list(auc, brier)
+  )
+
+  list(
+    before_calib = list(pred = .bc_pred, auc_brier = .bc_auc_brier),
+    after_calib = list(pred = .ac_pred, auc_brier = .ac_auc_brier)
+  )
+}
+
+
+#' Platt Scaling - Linear logistic calibration
+#'
+#' @param .x prediction data before calibration
+#' @return prediction data after calibration
+fn_platt_scaling <- function(.d) {
+  .d %>%
+    dplyr::mutate(y = ifelse(truth == "M", 1, 0)) ->
+    .dd
+
+  .fit <- glm(y~prob.M, data = .dd, family = binomial())
+  .p <- predict(.fit, .dd[3], type = "response")
+
+  .dd %>%
+    dplyr::mutate(prob.M = .p) %>%
+    dplyr::mutate(prob.B = 1 - prob.M) %>%
+    dplyr::mutate(response = ifelse(prob.M >=0.5, "M", "B")) %>%
+    dplyr::select(-y)
+}
+
+
+#' Plot calibration curve
+#'
+#' @param calibdata the calibration data prediction and auc brier score
+#' @return calibration curve ggplot figure
+fn_plot_calibration_curve <- function(.x) {
+  .pred <- .x$pred
+  .auc_brier <- .x$auc_brier
+
+  .cd <- generateCalibrationData(obj = .pred)
+
+  .prop <- .cd$proportion
+  .bin <- .cd$data
+
+  ggplot(obj$proportion, aes(x = bin, y = Proportion)) +
+    geom_point() +
+    geom_smooth()
+
+
+}
+
+
+
+
