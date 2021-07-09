@@ -69,6 +69,11 @@ names(bm.predict) <- c("panel", "panel_ca125", "ca125")
 
 # Calibration -------------------------------------------------------------
 
+
+performance(
+  pred = bm.predict$panel$TC,
+  measures = list(auc, brier)
+)
 cal <- generateCalibrationData(bm.predict$panel$TC)
 cal$proportion
 plotCalibration(cal, smooth = TRUE)
