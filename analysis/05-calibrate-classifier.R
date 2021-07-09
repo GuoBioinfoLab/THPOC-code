@@ -46,11 +46,28 @@ purrr::map2(
 
 names(bm.pred) <- c("panel", "panel_ca125", "ca125")
 
-# Before calibrate --------------------------------------------------------
 
-performance(
-  pred = bm.pred$panel$TC,
-  measures = list(auc, brier)
-)
+# Calibration -------------------------------------------------------------
 
+purrr::map(
+  .x = bm.pred$panel,
+  .f = fn_get_calibrate
+) ->
+  bm.calibrate
+
+
+bm.calibrate$TC$before_calib$pred %>%
+  generateCalibrationData() %>%
+  plotCalibration(smooth = TRUE)
+
+bm.calibrate$VC1$before_calib$pred %>%
+  generateCalibrationData() %>%
+  plotCalibration(smooth = TRUE)
+
+bm.calibrate$VC1$before_cali$auc_brier
+
+bm.calibrate$VC2$before_calib$pred %>%
+  generateCalibrationData() %>%
+  plotCalibration(smooth = TRUE)
+bm.calibrate$VC1$after_calib$auc_brier
 
