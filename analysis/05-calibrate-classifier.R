@@ -56,18 +56,46 @@ purrr::map(
   bm.calibrate
 
 
-bm.calibrate$TC$before_calib$pred %>%
-  generateCalibrationData() %>%
-  plotCalibration(smooth = TRUE)
+# Calibration plot --------------------------------------------------------
 
-bm.calibrate$VC1$before_calib$pred %>%
-  generateCalibrationData() %>%
-  plotCalibration(smooth = TRUE)
+tibble::tibble(
+  name = list(names(bm.calibrate)),
+  calib = list(c("before", "after"))
+) %>%
+  tidyr::unnest(cols = name) %>%
+  tidyr::unnest(cols = calib) %>%
+  dplyr::mutate(calib_plot = purrr::map2(
+    .x = name,
+    .y = calib,
+    .f = function(.x, .y) {
+      .title <- glue::glue("{.x} {.y} calibration")
+      .d <- bm.calibrate[[.x]][[.y]]
+      fn_plot_calibration_curve(.x = .d, .title = .title)
+    }
+  )) ->
+  bm.calibrate.plot
 
-bm.calibrate$VC1$before_cali$auc_brier
 
-bm.calibrate$VC2$before_calib$pred %>%
-  generateCalibrationData() %>%
-  plotCalibration(smooth = TRUE)
-bm.calibrate$VC1$after_calib$auc_brier
+# Save ggplot -------------------------------------------------------------
+
+purrr::pwalk(
+  .l = bm.calibrate.plot,
+  .f = function(name, calib, calib_plot) {
+    .filename <- glue::glue("{name}-{calib}-calibration-plot.pdf")
+
+    ggsave(
+      filename = .filename,
+      plot = calib_plot,
+      device = "pdf",
+      path = "data/reviseoutput/01-model-calibration",
+      width = 5.2,
+      height = 5
+    )
+  }
+)
+
+
+# Save image --------------------------------------------------------------
+
+save.image(file = "data/rda/05-calibrate-classifier.rda")
 
