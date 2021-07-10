@@ -63,8 +63,8 @@ fn_get_calibrate <- function(.x) {
   )
 
   list(
-    before_calib = list(pred = .bc_pred, auc_brier = .bc_auc_brier),
-    after_calib = list(pred = .ac_pred, auc_brier = .ac_auc_brier)
+    before = list(pred = .bc_pred, auc_brier = .bc_auc_brier),
+    after = list(pred = .ac_pred, auc_brier = .ac_auc_brier)
   )
 }
 
@@ -93,19 +93,10 @@ fn_platt_scaling <- function(.d) {
 #'
 #' @param calibdata the calibration data prediction and auc brier score
 #' @return calibration curve ggplot figure
-fn_plot_calibration_curve <- function(.x) {
-  .x <- bm.calibrate$VC1$after_calib
+fn_plot_calibration_curve <- function(.x, .title) {
   .pred <- .x$pred
   .pred_data <- .pred$data
   .auc_brier <- .x$auc_brier
-
-  .auc_brier %>%
-    tibble::enframe() %>%
-    dplyr::mutate(name = c("AUC", "Brier")) %>%
-    dplyr::mutate(label = glue::glue("{name}:{round(value, digits = 3)}")) %>%
-    dplyr::mutate(x = c(0.1, 0.1), y = c(0.9, 0.85)) ->
-    .labels
-
 
   .pred_data %>%
     dplyr::mutate(pred = prob.M) %>%
@@ -123,23 +114,50 @@ fn_plot_calibration_curve <- function(.x) {
     dplyr::ungroup() ->
     .for_plot
 
+  .auc_brier %>%
+    tibble::enframe() %>%
+    dplyr::mutate(name = c("AUC", "Brier")) %>%
+    dplyr::mutate(label = glue::glue("{name}:{round(value, digits = 3)}")) %>%
+    dplyr::mutate(x = c(0.15, 0.15), y = c(0.95, 0.9)) ->
+    .labels
+
   .for_plot %>%
     ggplot(aes(x = bin_pred, y = bin_prob)) +
     geom_point(shape = 2) +
     geom_abline(linetype = 17) +
-    geom_smooth(aes(x = pred, y = prob), color = "red", se = FALSE, method = "loess") +
-    geom_text(data = .labels, aes(x = x, y = y, label = label)) +
+    geom_smooth(aes(x = pred, y = prob), color ="red", se = FALSE, method = "loess") +
+    scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2), expand = c(0.01, 0)) +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2), expand = c(0.02, 0, 0.02, 0)) +
+    geom_text(data = .labels, aes(x = x, y = y, label = label), size = 4) +
     labs(
       x = "Predicted probability",
-      y = "Actual probability"
+      y = "Actual probability",
+      title = .title
+    ) +
+    theme(
+      panel.background = element_rect(fill = NA),
+      panel.grid = element_blank(),
+      panel.border = element_blank(),
+
+      axis.line.x.bottom = element_line(color = "black"),
+      axis.line.x.top = element_line(color = "black"),
+      axis.line.y.left = element_line(color = "black"),
+      axis.ticks.length = unit(x = 0.2, units = "cm"),
+      axis.text = element_text(color = "black", size = 14),
+      axis.title = element_text(color = "black", size = 18),
+
+      legend.position = 'bottom',
+      legend.background = element_rect(fill = NA),
+      legend.key = element_rect(fill = NA),
+      legend.text = element_text(size = 16),
+      legend.title = element_text(size = 16),
+      legend.key.width = unit(1.8, units = "cm"),
+      legend.spacing = unit(c(0,0,0,0), units = "cm"),
+      legend.title.align = 0,
+
+      plot.margin = unit(c(1, 1, 0.5, 0.5), units = "cm"),
+      plot.title = element_text(hjust = 0.5, size = 18)
     )
-
-  .for_plot %>%
-    ggplot(aes(x = pred)) +
-    geom_histogram(fill = "black", bins = 10) +
-    scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.1))
-
-
 }
 
 
