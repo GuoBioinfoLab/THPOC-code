@@ -94,17 +94,50 @@ fn_platt_scaling <- function(.d) {
 #' @param calibdata the calibration data prediction and auc brier score
 #' @return calibration curve ggplot figure
 fn_plot_calibration_curve <- function(.x) {
+  .x <- bm.calibrate$VC1$after_calib
   .pred <- .x$pred
+  .pred_data <- .pred$data
   .auc_brier <- .x$auc_brier
 
-  .cd <- generateCalibrationData(obj = .pred)
+  .auc_brier %>%
+    tibble::enframe() %>%
+    dplyr::mutate(name = c("AUC", "Brier")) %>%
+    dplyr::mutate(label = glue::glue("{name}:{round(value, digits = 3)}")) %>%
+    dplyr::mutate(x = c(0.1, 0.1), y = c(0.9, 0.85)) ->
+    .labels
 
-  .prop <- .cd$proportion
-  .bin <- .cd$data
 
-  ggplot(obj$proportion, aes(x = bin, y = Proportion)) +
-    geom_point() +
-    geom_smooth()
+  .pred_data %>%
+    dplyr::mutate(pred = prob.M) %>%
+    dplyr::mutate(prob = ifelse(truth == "M", 1, 0)) %>%
+    dplyr::mutate(bin = dplyr::ntile(pred, 10)) %>%
+    dplyr::group_by(bin) %>%
+    dplyr::mutate(
+      n = dplyr::n(),
+      bin_pred = mean(pred),
+      bin_prob = mean(prob),
+      se = sqrt((bin_prob * (1 - bin_prob)) / n),
+      ul = bin_prob + 1.96 * se,
+      ll = bin_prob - 1.96 * se
+    ) %>%
+    dplyr::ungroup() ->
+    .for_plot
+
+  .for_plot %>%
+    ggplot(aes(x = bin_pred, y = bin_prob)) +
+    geom_point(shape = 2) +
+    geom_abline(linetype = 17) +
+    geom_smooth(aes(x = pred, y = prob), color = "red", se = FALSE, method = "loess") +
+    geom_text(data = .labels, aes(x = x, y = y, label = label)) +
+    labs(
+      x = "Predicted probability",
+      y = "Actual probability"
+    )
+
+  .for_plot %>%
+    ggplot(aes(x = pred)) +
+    geom_histogram(fill = "black", bins = 10) +
+    scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.1))
 
 
 }
