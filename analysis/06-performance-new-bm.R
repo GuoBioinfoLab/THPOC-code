@@ -42,12 +42,31 @@ fn_get_bm_hc_task <- function(.task) {
     .vc1_vc2_tom <- c(.vc1_vc2, .x$samples$Tom)
     .x$samples$VC1_VC2 <- .vc1_vc2
     .x$samples$VC1_VC2_Tom <- .vc1_vc2_tom
-
     .x
   })
 }
 
-fn_get_bm_bam_task <- function(){}
+fn_get_bm_bam_task <- function(.task, .w, .t){
+  .w@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(type != "normal") %>%
+    dplyr::pull(barcode) ->
+    .ws
+
+  .t@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(patientGroup != "HC") %>%
+    dplyr::pull(barcode) ->
+    .ts
+
+  .wts <- c(.ws, .ts)
+
+  purrr::map(.x = .task, .f = function(.x) {
+    .samples <- purrr::map(.x$samples, .f = function(.x) {c(na.omit(.x[.wts]))})
+    .x$samples <- .samples
+    .x
+  })
+}
 
 fn_performance_bm <- function(.x, .y) {
   .perf <- fn_performance(.x, .y)
@@ -61,6 +80,16 @@ fn_performance_bm <- function(.x, .y) {
   )
 }
 
+fn_save_auc <- function(.filename, .plot) {
+  ggsave(
+    filename = .filename,
+    plot = .plot,
+    device = "pdf",
+    path = "data/reviseoutput/02-BM",
+    width = 5.2,
+    height = 4.5
+  )
+}
 
 # Task --------------------------------------------------------------------
 
@@ -70,6 +99,8 @@ readr::write_rds(
   file = "data/rda/bm.hc.task.rds.gz",
   compress = "gz"
 )
+
+bm.bam.task <- fn_get_bm_bam_task(.task = bm.hc.task)
 
 # Performance -------------------------------------------------------------
 
@@ -100,13 +131,39 @@ purrr::walk2(
       x = .y$metrics,
       path = glue::glue("data/reviseoutput/02-BM/bm.hc.{.x}.metrics.xlsx")
     )
-    ggsave(
-      filename =  glue::glue("bm.hc.{.x}.aucplot.pdf"),
-      plot = .y$plot,
-      device = "pdf",
-      path = "data/reviseoutput/02-BM",
-      width = 5.2,
-      height = 4.5
+    fn_save_auc(
+      .filename = glue::glue("bm.hc.{.x}.aucplot.pdf"),
+      .plot = .y$plot
     )
   }
 )
+
+# Merge plot --------------------------------------------------------------
+
+merge_plots <- fn_get_merge_plots(
+  .list = bm.hc.performance,
+  .datasets = as.list(names(bm.hc.performance$panel$performance))
+)
+
+purrr::walk2(
+  .x = as.list(names(bm.hc.performance$panel$performance)),
+  .y = merge_plots,
+  .f = function(.x, .y) {
+    fn_save_auc(
+      .filename = glue::glue("BM.HC-{.x}-auc-merge.pdf"),
+      .plot = .y
+    )
+  }
+)
+
+# Merge metrics -----------------------------------------------------------
+
+merge_metrics <- fn_get_merge_metrics(.list = bm.hc.performance)
+readr::write_tsv(x = merge_metrics, file = glue::glue("data/reviseoutput/02-BM/BM.HC-metrics-merge.tsv"))
+writexl::write_xlsx(x = merge_metrics, path = glue::glue("data/reviseoutput/02-BM/BM.HC-metrics-merge.xlsx"))
+
+
+# Save image --------------------------------------------------------------
+
+save.image(file = "data/rda/06-performance-new-bm.rda")
+load(file = "data/rda/06-performance-new-bm.rda")
