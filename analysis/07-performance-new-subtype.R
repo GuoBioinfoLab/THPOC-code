@@ -19,6 +19,13 @@ tom.se <- readr::read_rds(file = "data/rda/tom.se.rds.gz")
 bm.hc.task <- readr::read_rds(file = "data/rda/bm.hc.task.rds.gz")
 model.list <- readr::read_rds(file = "data/rda/model.list.rds.gz")
 
+Endometriosis_samples <- readxl::read_xlsx(path = 'data/raw/wuhan/endoinfo-V5-metadata-1.xlsx', sheet = 3)
+Borderline_samples <- readxl::read_xlsx(path = "data/raw/borderline.xlsx") %>%
+  dplyr::filter(!is.na(grade)) %>%
+  dplyr::filter(barcode != "name") %>%
+  dplyr::filter(barcode != "barcode") %>%
+  dplyr::filter(oc != "OC44")
+
 # src ---------------------------------------------------------------------
 
 source(file = "src/utils.R")
@@ -147,6 +154,98 @@ fn_get_epi_task <- function(.task, .w, .t) {
     epi.hc = .epi.hc.task,
     epi.bam = .epi.bam.task
   )
+}
+
+fn_get_endo_task <- function(.task, .t, .endo) {
+
+  .t@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(patientGroup %in% c("ovarianCancer", "ovarianBorderline")) %>%
+    dplyr::select(barcode, class = patientGroup) ->
+    .te
+
+  .endo %>%
+    dplyr::filter(oc %in% c("OC79", "OC172")) %>%
+    dplyr::select(barcode, class) ->
+    .we
+
+  .wtd <- dplyr::bind_rows(.we, .te)
+  .wtd %>% dplyr::group_by(class) %>% dplyr::count()
+
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .e <- c(na.omit(.s[c(.wtd$barcode)]))
+
+      .x$samples <- list(Endometriosis = .e)
+      .x
+    }) ->
+    .endo.task
+
+  list(
+    endo.hc = .endo.task,
+    endo.bam = .endo.task
+  )
+}
+
+fn_get_bl_task <- function(.task, .w, .t, .bl) {
+  .w@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(oc %in% c("OC79", "OC172")) %>%
+    dplyr::mutate(class = ifelse(type == "normal", "H", stage)) %>%
+    dplyr::select(barcode, class) %>%
+    dplyr::filter(class %in% c("B", "H")) ->
+    .wd
+
+  .t@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(patientGroup %in% c("HC", "ovarianBenign")) %>%
+    dplyr::select(barcode, class = patientGroup) %>%
+    dplyr::mutate(class = ifelse(class == "HC", "H", "B")) ->
+    .td
+
+  dplyr::bind_rows(
+    .wd, .td,
+    .bl %>% dplyr::select(barcode, class) %>% dplyr::mutate(class = "M")
+  ) ->
+    .wtd
+
+  .bl.hc <- .wtd
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .b <- c(na.omit(.s[c(.bl.hc$barcode)]))
+
+      .x$samples <- list(Borderline = .b)
+      .x
+    }) ->
+    .bl.hc.task
+
+  .bl.bam <- .bl.hc %>% dplyr::filter(class != "H")
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .b <- c(na.omit(.s[c(.bl.bam$barcode)]))
+
+      .x$samples <- list(Borderline = .b)
+      .x
+    }) ->
+    .bl.bam.task
+
+  list(
+    bl.hc = .bl.hc.task,
+    bl.bam = .bl.bam.task
+  )
+
 }
 
 fn_performance_ensemble <- function(.x, .y) {
@@ -295,6 +394,36 @@ fn_predict_subtype(
   .out = "04-EPI"
 )
 
+
+# Endo --------------------------------------------------------------------
+endo.hc.bam.task <- fn_get_endo_task(.task = bm.hc.task, .t = tom.se, .endo = Endometriosis_samples)
+readr::write_rds(
+  x = endo.hc.bam.task,
+  file = "data/rda/endo.hc.bam.task.rds.gz",
+  compress = "gz"
+)
+
+# predict subtype
+fn_predict_subtype(
+  .task = endo.hc.bam.task,
+  .name = "endo.hc.bam",
+  .out = "05-ENDO"
+)
+
+# BORDERLINE --------------------------------------------------------------
+bl.hc.bam.task <- fn_get_bl_task(.task = bm.hc.task, .w = wuhan.se, .t = tom.se, .bl = Borderline_samples)
+readr::write_rds(
+  x = bl.hc.bam.task,
+  file = "data/rda/bl.hc.bam.task.rds.gz",
+  compress = "gz"
+)
+
+# predict subtype
+fn_predict_subtype(
+  .task = bl.hc.bam.task,
+  .name = "bl.hc.bam",
+  .out = "06-BL"
+)
 
 # Save image --------------------------------------------------------------
 
