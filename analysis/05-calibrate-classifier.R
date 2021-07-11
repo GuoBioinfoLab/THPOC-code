@@ -18,123 +18,75 @@ source(file = "src/calibrate.R")
 
 # Load data ---------------------------------------------------------------
 
+model.list <- readr::read_rds(file = "data/rda/model.list.rds.gz")
+
 bm.hc.task <- readr::read_rds(file = "data/rda/bm.hc.task.rds.gz")
 bm.bam.task <- readr::read_rds(file = "data/rda/bm.bam.task.rds.gz")
-model.list <- readr::read_rds(file = "data/rda/model.list.rds.gz")
+bm.hc.bam.task <- list(bm.hc = bm.hc.task, bm.bam = bm.bam.task)
+
+el.hc.bam.task <- readr::read_rds(file = "data/rda/el.hc.bam.task.rds.gz")
+epi.hc.bam.task <- readr::read_rds(file = "data/rda/epi.hc.bam.task.rds.gz")
+endo.hc.bam.task <- readr::read_rds(file = "data/rda/endo.hc.bam.task.rds.gz")
+bl.hc.bam.task <- readr::read_rds(file = "data/rda/bl.hc.bam.task.rds.gz")
 
 # Function ----------------------------------------------------------------
 
+fn_calibrate_pipe <- function(.x, .prefix) {
+  .prefix <- toupper(.prefix)
+  # predict
+  .pred <- purrr::map2(.x = model.list, .y = .x, .f = fn_get_mlr_pred)
+  # calibration
+  .calibrate <- purrr::map(.x = .pred$panel, .f = fn_get_calibrate )
+  # plot
+  .calibrate.plot <- tibble::tibble(
+    name = list(names(.calibrate)),
+    calib = list(c("before", "after"))
+  ) %>%
+    tidyr::unnest(cols = name) %>%
+    tidyr::unnest(cols = calib) %>%
+    dplyr::mutate(calib_plot = purrr::map2(
+      .x = name,
+      .y = calib,
+      .f = function(.x, .y) {
+        .title <- glue::glue("{.x} {.y} calibration")
+        .d <- .calibrate[[.x]][[.y]]
+        fn_plot_calibration_curve(.x = .d, .title = .title)
+      }
+    ))
+  # save plot
+  purrr::pwalk(
+    .l = .calibrate.plot,
+    .f = function(name, calib, calib_plot) {
+      .filename <- glue::glue("{.prefix}.{name}-{calib}-calibration-plot.pdf")
 
-# Performance --------------------------------------------------------------
-
-# hc
-purrr::map2(
-  .x = model.list,
-  .y = bm.hc.task,
-  .f = fn_get_mlr_pred
-) ->
-  bm.hc.pred
-names(bm.hc.pred) <- c("panel", "panel_ca125", "ca125")
-
-# bam
-purrr::map2(
-  .x = model.list,
-  .y = bm.bam.task,
-  .f = fn_get_mlr_pred
-) ->
-  bm.bam.pred
-names(bm.bam.pred) <- c("panel", "panel_ca125", "ca125")
-
-
-# Calibration -------------------------------------------------------------
-
-# hc
-purrr::map(
-  .x = bm.hc.pred$panel,
-  .f = fn_get_calibrate
-) ->
-  bm.hc.calibrate
-
-# bam
-purrr::map(
-  .x = bm.bam.pred$panel,
-  .f = fn_get_calibrate
-) ->
-  bm.bam.calibrate
-
-# Calibration plot --------------------------------------------------------
-
-# hc
-tibble::tibble(
-  name = list(names(bm.hc.calibrate)),
-  calib = list(c("before", "after"))
-) %>%
-  tidyr::unnest(cols = name) %>%
-  tidyr::unnest(cols = calib) %>%
-  dplyr::mutate(calib_plot = purrr::map2(
-    .x = name,
-    .y = calib,
-    .f = function(.x, .y) {
-      .title <- glue::glue("{.x} {.y} calibration")
-      .d <- bm.hc.calibrate[[.x]][[.y]]
-      fn_plot_calibration_curve(.x = .d, .title = .title)
+      ggsave(
+        filename = .filename,
+        plot = calib_plot,
+        device = "pdf",
+        path = "data/reviseoutput/01-model-calibration",
+        width = 5.2,
+        height = 5
+      )
     }
-  )) ->
-  bm.hc.calibrate.plot
+  )
+}
 
-# bam
-tibble::tibble(
-  name = list(names(bm.bam.calibrate)),
-  calib = list(c("before", "after"))
+# Calibrate ---------------------------------------------------------------
+
+list(
+  bm.hc.bam.task,
+  el.hc.bam.task,
+  epi.hc.bam.task,
+  endo.hc.bam.task,
+  bl.hc.bam.task
 ) %>%
-  tidyr::unnest(cols = name) %>%
-  tidyr::unnest(cols = calib) %>%
-  dplyr::mutate(calib_plot = purrr::map2(
-    .x = name,
-    .y = calib,
-    .f = function(.x, .y) {
-      .title <- glue::glue("{.x} {.y} calibration")
-      .d <- bm.hc.calibrate[[.x]][[.y]]
-      fn_plot_calibration_curve(.x = .d, .title = .title)
-    }
-  )) ->
-  bm.bam.calibrate.plot
+  purrr::walk(.f = function(.l) {
+    names(.l) %>%
+      purrr::walk(.f = function(.name) {
+        fn_calibrate_pipe(.x = .l[[.name]], .prefix = .name)
+      })
+  })
 
-# Save ggplot -------------------------------------------------------------
-
-# hc
-purrr::pwalk(
-  .l = bm.hc.calibrate.plot,
-  .f = function(name, calib, calib_plot) {
-    .filename <- glue::glue("BM.HC.{name}-{calib}-calibration-plot.pdf")
-
-    ggsave(
-      filename = .filename,
-      plot = calib_plot,
-      device = "pdf",
-      path = "data/reviseoutput/01-model-calibration",
-      width = 5.2,
-      height = 5
-    )
-  }
-)
-
-# bam
-purrr::pwalk(
-  .l = bm.bam.calibrate.plot,
-  .f = function(name, calib, calib_plot) {
-    .filename <- glue::glue("BM.BAM.{name}-{calib}-calibration-plot.pdf")
-
-    ggsave(
-      filename = .filename,
-      plot = calib_plot,
-      device = "pdf",
-      path = "data/reviseoutput/01-model-calibration",
-      width = 5.2,
-      height = 5
-    )
-  }
-)
 
 # Save image --------------------------------------------------------------
 
