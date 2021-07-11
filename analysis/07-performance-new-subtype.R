@@ -92,6 +92,10 @@ fn_get_el_task <- function(.task, .w, .t) {
   )
 }
 
+fn_get_epi_task <- function(.task, .w, .t) {
+
+}
+
 fn_performance_ensemble <- function(.x, .y) {
   .perf <- fn_performance(.x, .y)
   .metrics <- fn_get_metrics(.perf)
@@ -212,3 +216,19 @@ purrr::walk(
     writexl::write_xlsx(x = .mm, path = glue::glue("data/reviseoutput/03-EL/{.prefix}-metrics-merge.xlsx"))
   }
 )
+
+
+
+# Epi ---------------------------------------------------------------------
+# task
+epi.hc.bam.task <- fn_get_epi_task(.task = bm.hc.task, .w = wuhan.se, .t = tom.se)
+readr::write_rds(
+  x = epi.hc.bam.task,
+  file = "data/rda/epi.hc.bam.task.rds.gz",
+  compress = "gz"
+)
+
+# Save image --------------------------------------------------------------
+
+save.image(file = "data/rda/07-performance-new-subtype.rda")
+load(file = "data/rda/07-performance-new-subtype.rda")
