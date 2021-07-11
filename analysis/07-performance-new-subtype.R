@@ -93,7 +93,60 @@ fn_get_el_task <- function(.task, .w, .t) {
 }
 
 fn_get_epi_task <- function(.task, .w, .t) {
+  .w@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(oc %in% c("OC79", "OC172")) %>%
+    dplyr::filter(!is.na(epi.non.epi)) %>%
+    dplyr::mutate(epi.non.epi = ifelse(type == "normal", "H", epi.non.epi)) %>%
+    dplyr::mutate(epi.non.epi = ifelse(epi.non.epi == "Benign", "B", epi.non.epi)) %>%
+    dplyr::select(barcode, epi.non.epi) ->
+    .wd
 
+  .t@colData %>%
+    as.data.frame() %>%
+    dplyr::mutate(epi.non.epi = ifelse(class == "M", "epithelial", "H")) %>%
+    dplyr::mutate(epi.non.epi = ifelse(stageFourGroups == "benign", "B", epi.non.epi)) %>%
+    dplyr::select(barcode, epi.non.epi) ->
+    .td
+
+  .wtd <- dplyr::bind_rows(.wd, .td)
+
+  .epi.hc <- .wtd %>% dplyr::filter(epi.non.epi != "non-epithelial")
+  .nepi.hc <- .wtd %>% dplyr::filter(epi.non.epi != "epithelial")
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .epi <- c(na.omit(.s[c(.epi.hc$barcode)]))
+      .nepi <- c(na.omit(.s[c(.nepi.hc$barcode)]))
+
+      .x$samples <- list("Epi" = .epi, "Non-epi" = .nepi)
+      .x
+    }) ->
+    .epi.hc.task
+
+  .epi.bam <- .epi.hc %>% dplyr::filter(epi.non.epi != "H")
+  .nepi.bam <- .nepi.hc %>% dplyr::filter(epi.non.epi != "H")
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .epi <- c(na.omit(.s[c(.epi.bam$barcode)]))
+      .nepi <- c(na.omit(.s[c(.nepi.bam$barcode)]))
+
+      .x$samples <- list("Epi" = .epi, "Non-epi" = .nepi)
+      .x
+    }) ->
+    .epi.bam.task
+
+  list(
+    epi.hc = .epi.hc.task,
+    epi.bam = .epi.bam.task
+  )
 }
 
 fn_performance_ensemble <- function(.x, .y) {
@@ -187,7 +240,7 @@ purrr::walk(
     .prefix <- toupper(.x)
     .y <- merge_plots[[.x]]
     purrr::walk2(
-      .x = list("Early", "Late"),
+      .x =  as.list(names(.y)),
       .y = .y,
       .f = function(.x, .y, .prefix) {
         ggsave(
@@ -226,6 +279,106 @@ readr::write_rds(
   x = epi.hc.bam.task,
   file = "data/rda/epi.hc.bam.task.rds.gz",
   compress = "gz"
+)
+
+# performance
+purrr::map(
+  .x = epi.hc.bam.task,
+  .f = function(.x) {
+    purrr::map2(
+      .x = model.list,
+      .y = .x,
+      .f = fn_performance_ensemble
+    )
+  }
+) ->
+  epi.hc.bam.perfromance
+
+readr::write_rds(
+  x = epi.hc.bam.perfromance,
+  file = "data/rda/epi.hc.bam.perfromance.rds.gz",
+  compress = "gz"
+)
+
+
+# save metrics and plot
+purrr::walk(
+  .x = names(epi.hc.bam.perfromance),
+  .f = function(.x) {
+    .prefix <- .x
+    .y <- epi.hc.bam.perfromance[[.x]]
+    purrr::walk2(
+      .x = list("panel", "panel_ca125", "ca125"),
+      .y = .y,
+      .f = function(.x, .y, .prefix) {
+        readr::write_tsv(
+          x = .y$metrics,
+          file = glue::glue("data/reviseoutput/04-EPI/{.prefix}.{.x}.metrics.tsv")
+        )
+        writexl::write_xlsx(
+          x = .y$metrics,
+          path = glue::glue("data/reviseoutput/04-EPI/{.prefix}.{.x}.metrics.xlsx")
+        )
+        ggsave(
+          filename = glue::glue("{.prefix}.{.x}.aucplot.pdf"),
+          plot = .y$plot,
+          device = "pdf",
+          path = "data/reviseoutput/04-EPI",
+          width = 5.2,
+          height = 4.5
+        )
+      },
+      .prefix = .prefix
+    )
+  }
+)
+
+
+# merge plots
+merge_plots <- purrr::map(
+  .x = epi.hc.bam.perfromance,
+  .f = function(.x) {
+    fn_get_merge_plots(
+      .list = .x,
+      .datasets = as.list(names(.x$panel$performance))
+    )
+  }
+)
+
+purrr::walk(
+  .x = names(merge_plots),
+  .f = function(.x) {
+    .prefix <- toupper(.x)
+    .y <- merge_plots[[.x]]
+    purrr::walk2(
+      .x = as.list(names(.y)),
+      .y = .y,
+      .f = function(.x, .y, .prefix) {
+        ggsave(
+          filename = glue::glue("{.prefix}.{.x}-auc-merge.pdf"),
+          plot = .y,
+          device = "pdf",
+          path = "data/reviseoutput/04-EPI",
+          width = 5.2,
+          height = 4.5
+        )
+      },
+      .prefix = .prefix
+    )
+  }
+)
+
+# merge metrics
+purrr::walk(
+  .x = names(epi.hc.bam.perfromance),
+  .f = function(.x) {
+    .prefix <- toupper(.x)
+    .l <- epi.hc.bam.perfromance[[.x]]
+    .mm <- fn_get_merge_metrics(.list = .l)
+
+    readr::write_tsv(x = .mm, file = glue::glue("data/reviseoutput/04-EPI/{.prefix}-metrics-merge.tsv"))
+    writexl::write_xlsx(x = .mm, path = glue::glue("data/reviseoutput/04-EPI/{.prefix}-metrics-merge.xlsx"))
+  }
 )
 
 # Save image --------------------------------------------------------------
