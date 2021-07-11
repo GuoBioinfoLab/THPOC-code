@@ -62,7 +62,19 @@ purrr::map2(
 ) ->
   bm.performance
 names(bm.performance) <- c("panel", "panel_ca125", "ca125")
+
 readr::write_rds(x = bm.performance, file = "data/rda/bm.performance.rds.gz", compress = "gz")
+
+readr::write_rds(
+  x = list(
+    "panel" = panel.model,
+    "panel_ca125" = panel_ca125.model,
+    "ca125" = ca125.model
+  ),
+  file = "data/rda/model.list.rds.gz",
+  compress = "gz"
+)
+
 
 # save metrics and plot
 purrr::walk2(
