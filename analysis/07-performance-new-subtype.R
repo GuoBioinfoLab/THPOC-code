@@ -161,6 +161,106 @@ fn_performance_ensemble <- function(.x, .y) {
   )
 }
 
+fn_predict_subtype <- function(.task, .name, .out) {
+
+  # performance
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      purrr::map2(
+        .x = model.list,
+        .y = .x,
+        .f = fn_performance_ensemble
+      )
+    }
+  ) ->
+    .perfromance
+
+  readr::write_rds(
+    x = .perfromance,
+    file = glue::glue("data/rda/{.name}.perfromance.rds.gz"),
+    compress = "gz"
+  )
+
+  # save metrics and plot
+  purrr::walk(
+    .x = names(.perfromance),
+    .f = function(.x) {
+      .prefix <- .x
+      .y <- .perfromance[[.x]]
+      purrr::walk2(
+        .x = list("panel", "panel_ca125", "ca125"),
+        .y = .y,
+        .f = function(.x, .y, .prefix) {
+          readr::write_tsv(
+            x = .y$metrics,
+            file = glue::glue("data/reviseoutput/{.out}/{.prefix}.{.x}.metrics.tsv")
+          )
+          writexl::write_xlsx(
+            x = .y$metrics,
+            path = glue::glue("data/reviseoutput/{.out}/{.prefix}.{.x}.metrics.xlsx")
+          )
+          ggsave(
+            filename = glue::glue("{.prefix}.{.x}.aucplot.pdf"),
+            plot = .y$plot,
+            device = "pdf",
+            path = glue::glue("data/reviseoutput/{.out}"),
+            width = 5.2,
+            height = 4.5
+          )
+        },
+        .prefix = .prefix
+      )
+    }
+  )
+
+  # merge plots
+  .mps <- purrr::map(
+    .x = .perfromance,
+    .f = function(.x) {
+      fn_get_merge_plots(
+        .list = .x,
+        .datasets = as.list(names(.x$panel$performance))
+      )
+    }
+  )
+
+  purrr::walk(
+    .x = names(.mps),
+    .f = function(.x) {
+      .prefix <- toupper(.x)
+      .y <- .mps[[.x]]
+      purrr::walk2(
+        .x =  as.list(names(.y)),
+        .y = .y,
+        .f = function(.x, .y, .prefix) {
+          ggsave(
+            filename = glue::glue("{.prefix}.{.x}-auc-merge.pdf"),
+            plot = .y,
+            device = "pdf",
+            path = glue::glue("data/reviseoutput/{.out}"),
+            width = 5.2,
+            height = 4.5
+          )
+        },
+        .prefix = .prefix
+      )
+    }
+  )
+
+  # merge metrics
+  purrr::walk(
+    .x = names(.perfromance),
+    .f = function(.x) {
+      .prefix <- toupper(.x)
+      .l <- .perfromance[[.x]]
+      .mm <- fn_get_merge_metrics(.list = .l)
+
+      readr::write_tsv(x = .mm, file = glue::glue("data/reviseoutput/{.out}/{.prefix}-metrics-merge.tsv"))
+      writexl::write_xlsx(x = .mm, path = glue::glue("data/reviseoutput/{.out}/{.prefix}-metrics-merge.xlsx"))
+    }
+  )
+}
 
 # Early Late --------------------------------------------------------------
 
@@ -172,105 +272,12 @@ readr::write_rds(
   compress = "gz"
 )
 
-# performance
-purrr::map(
-  .x = el.hc.bam.task,
-  .f = function(.x) {
-    purrr::map2(
-      .x = model.list,
-      .y = .x,
-      .f = fn_performance_ensemble
-    )
-  }
-) ->
-  el.hc.bam.perfromance
-
-readr::write_rds(
-  x = el.hc.bam.perfromance,
-  file = "data/rda/el.hc.bam.perfromance.rds.gz",
-  compress = "gz"
+# predict subtype
+fn_predict_subtype(
+  .task = el.hc.bam.task,
+  .name = "el.hc.bam",
+  .out = "03-EL"
 )
-
-# save metrics and plot
-purrr::walk(
-  .x = names(el.hc.bam.perfromance),
-  .f = function(.x) {
-    .prefix <- .x
-    .y <- el.hc.bam.perfromance[[.x]]
-    purrr::walk2(
-      .x = list("panel", "panel_ca125", "ca125"),
-      .y = .y,
-      .f = function(.x, .y, .prefix) {
-        readr::write_tsv(
-          x = .y$metrics,
-          file = glue::glue("data/reviseoutput/03-EL/{.prefix}.{.x}.metrics.tsv")
-        )
-        writexl::write_xlsx(
-          x = .y$metrics,
-          path = glue::glue("data/reviseoutput/03-EL/{.prefix}.{.x}.metrics.xlsx")
-        )
-        ggsave(
-          filename = glue::glue("{.prefix}.{.x}.aucplot.pdf"),
-          plot = .y$plot,
-          device = "pdf",
-          path = "data/reviseoutput/03-EL",
-          width = 5.2,
-          height = 4.5
-        )
-      },
-      .prefix = .prefix
-    )
-  }
-)
-
-# merge plots
-merge_plots <- purrr::map(
-  .x = el.hc.bam.perfromance,
-  .f = function(.x) {
-    fn_get_merge_plots(
-      .list = .x,
-      .datasets = as.list(names(.x$panel$performance))
-    )
-  }
-)
-
-purrr::walk(
-  .x = names(merge_plots),
-  .f = function(.x) {
-    .prefix <- toupper(.x)
-    .y <- merge_plots[[.x]]
-    purrr::walk2(
-      .x =  as.list(names(.y)),
-      .y = .y,
-      .f = function(.x, .y, .prefix) {
-        ggsave(
-          filename = glue::glue("{.prefix}.{.x}-auc-merge.pdf"),
-          plot = .y,
-          device = "pdf",
-          path = "data/reviseoutput/03-EL",
-          width = 5.2,
-          height = 4.5
-        )
-      },
-      .prefix = .prefix
-    )
-  }
-)
-
-# merge metrics
-purrr::walk(
-  .x = names(el.hc.bam.perfromance),
-  .f = function(.x) {
-    .prefix <- toupper(.x)
-    .l <- el.hc.bam.perfromance[[.x]]
-    .mm <- fn_get_merge_metrics(.list = .l)
-
-    readr::write_tsv(x = .mm, file = glue::glue("data/reviseoutput/03-EL/{.prefix}-metrics-merge.tsv"))
-    writexl::write_xlsx(x = .mm, path = glue::glue("data/reviseoutput/03-EL/{.prefix}-metrics-merge.xlsx"))
-  }
-)
-
-
 
 # Epi ---------------------------------------------------------------------
 # task
@@ -281,105 +288,13 @@ readr::write_rds(
   compress = "gz"
 )
 
-# performance
-purrr::map(
-  .x = epi.hc.bam.task,
-  .f = function(.x) {
-    purrr::map2(
-      .x = model.list,
-      .y = .x,
-      .f = fn_performance_ensemble
-    )
-  }
-) ->
-  epi.hc.bam.perfromance
-
-readr::write_rds(
-  x = epi.hc.bam.perfromance,
-  file = "data/rda/epi.hc.bam.perfromance.rds.gz",
-  compress = "gz"
+# predict subtype
+fn_predict_subtype(
+  .task = epi.hc.bam.task,
+  .name = "epi.hc.bam",
+  .out = "04-EPI"
 )
 
-
-# save metrics and plot
-purrr::walk(
-  .x = names(epi.hc.bam.perfromance),
-  .f = function(.x) {
-    .prefix <- .x
-    .y <- epi.hc.bam.perfromance[[.x]]
-    purrr::walk2(
-      .x = list("panel", "panel_ca125", "ca125"),
-      .y = .y,
-      .f = function(.x, .y, .prefix) {
-        readr::write_tsv(
-          x = .y$metrics,
-          file = glue::glue("data/reviseoutput/04-EPI/{.prefix}.{.x}.metrics.tsv")
-        )
-        writexl::write_xlsx(
-          x = .y$metrics,
-          path = glue::glue("data/reviseoutput/04-EPI/{.prefix}.{.x}.metrics.xlsx")
-        )
-        ggsave(
-          filename = glue::glue("{.prefix}.{.x}.aucplot.pdf"),
-          plot = .y$plot,
-          device = "pdf",
-          path = "data/reviseoutput/04-EPI",
-          width = 5.2,
-          height = 4.5
-        )
-      },
-      .prefix = .prefix
-    )
-  }
-)
-
-
-# merge plots
-merge_plots <- purrr::map(
-  .x = epi.hc.bam.perfromance,
-  .f = function(.x) {
-    fn_get_merge_plots(
-      .list = .x,
-      .datasets = as.list(names(.x$panel$performance))
-    )
-  }
-)
-
-purrr::walk(
-  .x = names(merge_plots),
-  .f = function(.x) {
-    .prefix <- toupper(.x)
-    .y <- merge_plots[[.x]]
-    purrr::walk2(
-      .x = as.list(names(.y)),
-      .y = .y,
-      .f = function(.x, .y, .prefix) {
-        ggsave(
-          filename = glue::glue("{.prefix}.{.x}-auc-merge.pdf"),
-          plot = .y,
-          device = "pdf",
-          path = "data/reviseoutput/04-EPI",
-          width = 5.2,
-          height = 4.5
-        )
-      },
-      .prefix = .prefix
-    )
-  }
-)
-
-# merge metrics
-purrr::walk(
-  .x = names(epi.hc.bam.perfromance),
-  .f = function(.x) {
-    .prefix <- toupper(.x)
-    .l <- epi.hc.bam.perfromance[[.x]]
-    .mm <- fn_get_merge_metrics(.list = .l)
-
-    readr::write_tsv(x = .mm, file = glue::glue("data/reviseoutput/04-EPI/{.prefix}-metrics-merge.tsv"))
-    writexl::write_xlsx(x = .mm, path = glue::glue("data/reviseoutput/04-EPI/{.prefix}-metrics-merge.xlsx"))
-  }
-)
 
 # Save image --------------------------------------------------------------
 
