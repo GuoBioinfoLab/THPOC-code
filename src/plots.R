@@ -45,7 +45,7 @@ fn_plot_auc <- function(.d, .labels) {
     scale_color_manual(
       name = 'AUC',
       labels = .labels$label,
-      values = RColorBrewer::brewer.pal(n=5, name = 'Set1')
+      values = RColorBrewer::brewer.pal(n=length(.labels$label), name = 'Set1')
     ) +
     labs(
       x = "1 - Specificity",
