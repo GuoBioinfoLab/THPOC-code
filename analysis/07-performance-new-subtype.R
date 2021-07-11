@@ -165,3 +165,50 @@ purrr::walk(
     )
   }
 )
+
+# merge plots
+merge_plots <- purrr::map(
+  .x = el.hc.bam.perfromance,
+  .f = function(.x) {
+    fn_get_merge_plots(
+      .list = .x,
+      .datasets = as.list(names(.x$panel$performance))
+    )
+  }
+)
+
+purrr::walk(
+  .x = names(merge_plots),
+  .f = function(.x) {
+    .prefix <- toupper(.x)
+    .y <- merge_plots[[.x]]
+    purrr::walk2(
+      .x = list("Early", "Late"),
+      .y = .y,
+      .f = function(.x, .y, .prefix) {
+        ggsave(
+          filename = glue::glue("{.prefix}.{.x}-auc-merge.pdf"),
+          plot = .y,
+          device = "pdf",
+          path = "data/reviseoutput/03-EL",
+          width = 5.2,
+          height = 4.5
+        )
+      },
+      .prefix = .prefix
+    )
+  }
+)
+
+# merge metrics
+purrr::walk(
+  .x = names(el.hc.bam.perfromance),
+  .f = function(.x) {
+    .prefix <- toupper(.x)
+    .l <- el.hc.bam.perfromance[[.x]]
+    .mm <- fn_get_merge_metrics(.list = .l)
+
+    readr::write_tsv(x = .mm, file = glue::glue("data/reviseoutput/03-EL/{.prefix}-metrics-merge.tsv"))
+    writexl::write_xlsx(x = .mm, path = glue::glue("data/reviseoutput/03-EL/{.prefix}-metrics-merge.xlsx"))
+  }
+)
