@@ -50,7 +50,7 @@ fn_performance_bm <- function(.x, .y) {
 
 # Task --------------------------------------------------------------------
 bm.task <- c("panel" = list(wuhan.tom.panel.task), wuhan.tom.panel.ca125.task)
-
+readr::write_rds(x = bm.task, file = "data/rda/bm.task.rds.gz", compress = "gz")
 
 
 # Performance --------------------------------------------------------------
