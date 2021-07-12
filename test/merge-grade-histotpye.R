@@ -43,7 +43,17 @@ tom.grade.histotype <- readxl::read_xlsx(path = "data/raw/grade-serous/Tom-grade
 dplyr::bind_rows(
   wuhan.grade.histotype,
   tom.grade.histotype
-) %>%
+) ->
+  wuhan.tom.grade.histotype
+wuhan.tom.grade.histotype %>%
+  dplyr::group_by(oc, grade) %>%
+  dplyr::count() %>%
+  dplyr::ungroup() %>%
+  tidyr::spread(key = oc, value = n) %>%
+  dplyr::select(1, 4,3,5,2,6) %>%
+  dplyr::slice(3,4,2,1)
+
+wuhan.tom.grade.histotype %>%
   readr::write_rds(file = "data/rda/wuhan.tom.grade.histotype.rds.gz", compress = "gz")
 
 # Save image --------------------------------------------------------------
