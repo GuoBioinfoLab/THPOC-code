@@ -25,6 +25,8 @@ Borderline_samples <- readxl::read_xlsx(path = "data/raw/borderline.xlsx") %>%
   dplyr::filter(barcode != "name") %>%
   dplyr::filter(barcode != "barcode") %>%
   dplyr::filter(oc != "OC44")
+Grade_Histotype_samples <- readr::read_rds(file = "data/rda/wuhan.tom.grade.histotype.rds.gz") %>%
+  dplyr::filter(!oc %in% c("OC44", "OC521"))
 
 # src ---------------------------------------------------------------------
 
@@ -248,6 +250,114 @@ fn_get_bl_task <- function(.task, .w, .t, .bl) {
 
 }
 
+fn_get_glh_task <- function(.task, .w, .t, .gh) {
+  .w@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(oc %in% c("OC79", "OC172")) %>%
+    dplyr::mutate(type = plyr::revalue(x = type, replace = c("benign" = "B", "malignant" = "M", "normal" = "H", "unkown" = "M"))) %>%
+    dplyr::select(barcode, class = type) ->
+    .wd
+
+  .t@colData %>%
+    as.data.frame() %>%
+    dplyr::mutate(type = plyr::revalue(x = patientGroup, replace = c("HC" = "H", "ovarianBenign" = "B", "ovarianBorderline" = "M", "ovarianCancer" = "M"))) %>%
+    dplyr::select(barcode, class = type) ->
+    .td
+
+  .wtd <- dplyr::bind_rows(.wd, .td) %>%
+    dplyr::left_join(.gh, by = "barcode")
+  .wtdbh <- .wtd %>% dplyr::filter(class %in% c("B", "H"))
+
+  .grade.low.hc <- .wtd %>% dplyr::filter(grade == "low") %>% dplyr::bind_rows(.wtdbh)
+  .grade.high.hc <- .wtd %>% dplyr::filter(grade == "high") %>% dplyr::bind_rows(.wtdbh)
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .gl <- c(na.omit(.s[c(.grade.low.hc$barcode)]))
+      .gh <- c(na.omit(.s[c(.grade.high.hc$barcode)]))
+
+      .x$samples <- list(Low = .gl, High = .gh)
+      .x
+    }) ->
+    .glh.hc.task
+
+  .grade.low.bam <- .grade.low.hc %>% dplyr::filter(class != "H")
+  .grade.high.bam <- .grade.high.hc %>% dplyr::filter(class != "H")
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .gl <- c(na.omit(.s[c(.grade.low.bam$barcode)]))
+      .gh <- c(na.omit(.s[c(.grade.high.bam$barcode)]))
+
+      .x$samples <- list(Low = .gl, High = .gh)
+      .x
+    }) ->
+    .glh.bam.task
+
+  list(
+    glh.hc = .glh.hc.task,
+    glh.bam = .glh.bam.task
+  )
+}
+
+fn_get_sr_task <- function(.task, .w, .t, .gh) {
+  .w@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(oc %in% c("OC79", "OC172")) %>%
+    dplyr::mutate(type = plyr::revalue(x = type, replace = c("benign" = "B", "malignant" = "M", "normal" = "H", "unkown" = "M"))) %>%
+    dplyr::select(barcode, class = type) ->
+    .wd
+
+  .t@colData %>%
+    as.data.frame() %>%
+    dplyr::mutate(type = plyr::revalue(x = patientGroup, replace = c("HC" = "H", "ovarianBenign" = "B", "ovarianBorderline" = "M", "ovarianCancer" = "M"))) %>%
+    dplyr::select(barcode, class = type) ->
+    .td
+
+  .wtd <- dplyr::bind_rows(.wd, .td) %>%
+    dplyr::left_join(.gh, by = "barcode")
+  .wtdbh <- .wtd %>% dplyr::filter(class %in% c("B", "H"))
+
+  .sr.hc <- .wtd %>% dplyr::filter(grade == "high" & histotype == "serous") %>% dplyr::bind_rows(.wtdbh)
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .hs <- c(na.omit(.s[c(.sr.hc$barcode)]))
+
+      .x$samples <- list(Serous = .hs)
+      .x
+    }) ->
+    .sr.hc.task
+
+  .sr.bam <- .sr.hc %>% dplyr::filter(class != "H")
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .hs <- c(na.omit(.s[c(.sr.bam$barcode)]))
+
+      .x$samples <- list(Serous = .hs)
+      .x
+    }) ->
+    .sr.bam.task
+
+  list(
+    sr.hc = .sr.hc.task,
+    sr.bam = .sr.bam.task
+  )
+}
+
 fn_performance_ensemble <- function(.x, .y) {
   .perf <- fn_performance(.x, .y)
   .metrics <- fn_get_metrics(.perf)
@@ -428,9 +538,34 @@ fn_predict_subtype(
 
 # Grade -------------------------------------------------------------------
 
+glh.hc.bam.task <- fn_get_glh_task(.task = bm.hc.task, .w = wuhan.se, .t = tom.se, .gh = Grade_Histotype_samples)
+readr::write_rds(
+  x = glh.hc.bam.task,
+  file = "data/rda/glh.hc.bam.task.rds.gz",
+  compress = "gz"
+)
+
+# predict subtype
+fn_predict_subtype(
+  .task = glh.hc.bam.task,
+  .name = "glh.hc.bam",
+  .out = "07-GLH"
+)
 
 # Serous ------------------------------------------------------------------
 
+sr.hc.bam.task <- fn_get_sr_task(.task = bm.hc.task, .w = wuhan.se, .t = tom.se, .gh = Grade_Histotype_samples)
+readr::write_rds(
+  x = sr.hc.bam.task,
+  file = "data/rda/sr.hc.bam.task.rds.gz",
+  compress = "gz"
+)
+
+fn_predict_subtype(
+  .task = sr.hc.bam.task,
+  .name = "sr.hc.bam",
+  .out = "08-SR"
+)
 
 # Save image --------------------------------------------------------------
 
