@@ -28,6 +28,8 @@ el.hc.bam.task <- readr::read_rds(file = "data/rda/el.hc.bam.task.rds.gz")
 epi.hc.bam.task <- readr::read_rds(file = "data/rda/epi.hc.bam.task.rds.gz")
 endo.hc.bam.task <- readr::read_rds(file = "data/rda/endo.hc.bam.task.rds.gz")
 bl.hc.bam.task <- readr::read_rds(file = "data/rda/bl.hc.bam.task.rds.gz")
+glh.hc.bam.task <- readr::write_rds(file = "data/rda/glh.hc.bam.task.rds.gz")
+sr.hc.bam.task <- readr::write_rds(file = "data/rda/sr.hc.bam.task.rds.gz")
 
 # Function ----------------------------------------------------------------
 
@@ -78,7 +80,9 @@ list(
   el.hc.bam.task,
   epi.hc.bam.task,
   endo.hc.bam.task,
-  bl.hc.bam.task
+  bl.hc.bam.task,
+  glh.hc.bam.task,
+  sr.hc.bam.task
 ) %>%
   purrr::walk(.f = function(.l) {
     names(.l) %>%
