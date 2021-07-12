@@ -410,7 +410,7 @@ fn_predict_subtype(
   .out = "05-ENDO"
 )
 
-# BORDERLINE --------------------------------------------------------------
+# Borderline --------------------------------------------------------------
 bl.hc.bam.task <- fn_get_bl_task(.task = bm.hc.task, .w = wuhan.se, .t = tom.se, .bl = Borderline_samples)
 readr::write_rds(
   x = bl.hc.bam.task,
@@ -424,6 +424,13 @@ fn_predict_subtype(
   .name = "bl.hc.bam",
   .out = "06-BL"
 )
+
+
+# Grade -------------------------------------------------------------------
+
+
+# Serous ------------------------------------------------------------------
+
 
 # Save image --------------------------------------------------------------
 
