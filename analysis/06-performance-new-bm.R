@@ -118,7 +118,6 @@ purrr::map2(
   .f = fn_performance_bm
 ) ->
   bm.hc.performance
-names(bm.hc.performance) <- c("panel", "panel_ca125", "ca125")
 readr::write_rds(
   x = bm.hc.performance,
   file = "data/rda/bm.hc.performance.rds.gz",
@@ -151,7 +150,6 @@ purrr::map2(
   .f = fn_performance_bm
 ) ->
   bm.bam.performance
-names(bm.bam.performance) <- c("panel", "panel_ca125", "ca125")
 readr::write_rds(
   x = bm.bam.performance,
   file = "data/rda/bm.bam.performance.rds.gz",
