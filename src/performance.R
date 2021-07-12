@@ -297,21 +297,22 @@ fn_delong_test <- function(.x) {
       method = 'delong'
     ) %>%
       broom::tidy() %>%
-      dplyr::mutate(`P value` = format(p.value, digits = 3,scientific = TRUE)) %>%
-      dplyr::select(`P value`) %>%
+      dplyr::mutate(p.value = format(p.value, digits = 3,scientific = TRUE)) %>%
+      dplyr::select(p.value) %>%
       tibble::add_column(name = "TEPOC", .before = 1),
-    tibble::tibble(name = "CA125", `P value` = "-"),
+    tibble::tibble(name = "CA125", p.value = "-"),
     pROC::roc.test(
       pROC::roc(.x.panel_ca125$truth, .x.panel_ca125$prob.M),
       pROC::roc(.x.ca125$truth, .x.ca125$prob.M),
       method = 'delong'
     ) %>%
       broom::tidy() %>%
-      dplyr::mutate(`P value` = format(p.value, digits = 3,scientific = TRUE)) %>%
-      dplyr::select(`P value`) %>%
+      dplyr::mutate(p.value = format(p.value, digits = 3,scientific = TRUE)) %>%
+      dplyr::select(p.value) %>%
       tibble::add_column(name = "TEPOC + CA125", .before = 1)
   ) %>%
-    dplyr::mutate(`P value` = gsub(pattern = "e", replacement = "x10^", x = `P value`))
+    dplyr::mutate(p.value = gsub(pattern = "e", replacement = "x10^", x = p.value)) %>%
+    dplyr::rename(`AUC P value` = p.value)
 }
 
 fn_get_merge_metrics <- function(.list) {
@@ -329,9 +330,12 @@ fn_get_merge_metrics <- function(.list) {
     .for_delong_test
 
   .for_delong_test %>%
-    dplyr::mutate(p.value = purrr::map(.x = data, .f = fn_delong_test)) %>%
+    dplyr::mutate(
+      delong.p.value = purrr::map(.x = data, .f = fn_delong_test),
+      sn.sp.p.value = purrr::map(.x = data, .f = fn_sn_sp_test)
+    ) %>%
     dplyr::select(-data) %>%
-    tidyr::unnest(p.value) %>%
+    tidyr::unnest(cols = c(delong.p.value, sn.sp.p.value)) %>%
     dplyr::mutate(name = factor(name, levels = c("TEPOC", "CA125", "TEPOC + CA125")))->
     .pvalue
 
@@ -344,4 +348,45 @@ fn_get_merge_metrics <- function(.list) {
     dplyr::arrange(cohort, name) %>%
     dplyr::select(2, 1, 3:10) %>%
     dplyr::inner_join(.pvalue, by = c("cohort", "name"))
+}
+
+fn_sn_sp_test <- function(.x) {
+  list("TEPOC" = "panel", "CA125" = "ca125",  "TEPOC + CA125" = "panel_ca125") %>%
+    purrr::map(.f = function(.name) {
+      if(.name == "ca125") {return(tibble::tibble(`SN P value` = "-", `SP P value` = "-"))}
+      .x %>%
+        dplyr::filter(name %in% c(.name, "ca125")) %>%
+        dplyr::group_by(barcode) %>%
+        dplyr::filter(dplyr::n() > 1) %>%
+        dplyr::ungroup() %>%
+        dplyr::group_by(truth) %>%
+        tidyr::nest() %>%
+        dplyr::arrange(truth) %>%
+        dplyr::mutate(pval = purrr::map(.x = data, .f = function(.d) {
+          .d %>%
+            dplyr::select(name, barcode, response) %>%
+            tidyr::spread(key = name, value = response) %>%
+            dplyr::select(barcode, a = 2, b = 3) %>%
+            dplyr::mutate(mm = a == "M" & b == "M") %>%
+            dplyr::mutate(mb = a == "M" & b == "B") %>%
+            dplyr::mutate(bm = a == "B" & b == "M") %>%
+            dplyr::mutate(bb = a == "B" & b == "B") %>%
+            dplyr::group_by(bb, bm, mb, mm) %>%
+            dplyr::count() %>%
+            dplyr::pull(n) %>%
+            matrix(nrow = 2, byrow = TRUE) %>%
+            fisher.test() %>%
+            broom::tidy()
+        })) %>%
+        dplyr::ungroup() %>%
+        tidyr::unnest(pval) %>%
+        dplyr::select(truth, p.value) %>%
+        dplyr::mutate(p.value = format(p.value, digits = 3,scientific = TRUE)) %>%
+        dplyr::mutate(p.value = gsub(pattern = "e", replacement = "x10^", x = p.value)) %>%
+        tidyr::spread(key = truth, value = p.value) %>%
+        dplyr::rename(`SN P value` = M, `SP P value` = B)
+    }) %>%
+    tibble::enframe(name = "SNSP") %>%
+    tidyr::unnest(value) %>%
+    dplyr::select(-1)
 }
