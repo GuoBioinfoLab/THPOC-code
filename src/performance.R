@@ -330,10 +330,8 @@ fn_get_merge_metrics <- function(.list) {
     .for_delong_test
 
   .for_delong_test %>%
-    dplyr::mutate(
-      delong.p.value = purrr::map(.x = data, .f = fn_delong_test),
-      sn.sp.p.value = purrr::map(.x = data, .f = fn_sn_sp_test)
-    ) %>%
+    dplyr::mutate(delong.p.value = purrr::map(.x = data, .f = fn_delong_test)) %>%
+    dplyr::mutate(sn.sp.p.value = purrr::map(.x = data, .f = fn_sn_sp_test)) %>%
     dplyr::select(-data) %>%
     tidyr::unnest(cols = c(delong.p.value, sn.sp.p.value)) %>%
     dplyr::mutate(name = factor(name, levels = c("TEPOC", "CA125", "TEPOC + CA125")))->
@@ -373,7 +371,18 @@ fn_sn_sp_test <- function(.x) {
             dplyr::mutate(bb = a == "B" & b == "B") %>%
             dplyr::group_by(bb, bm, mb, mm) %>%
             dplyr::count() %>%
-            dplyr::pull(n) %>%
+            dplyr::ungroup() %>%
+            tidyr::gather(key = mmbb, value = lgl, -n) %>%
+            dplyr::filter(lgl) %>%
+            dplyr::select(mmbb, n) %>%
+            tibble::deframe() ->
+            .t
+
+          .order <- c("mm", "mb", "bm", "bb")
+          .tt <- .t[.order]
+          names(.tt) <- .order
+
+          tidyr::replace_na(.tt, replace = 0) %>%
             matrix(nrow = 2, byrow = TRUE) %>%
             fisher.test() %>%
             broom::tidy()
