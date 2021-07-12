@@ -50,5 +50,32 @@ wuhan.tom.used.samples %>%
   dplyr::group_by(oc, type) %>%
   tidyr::nest() %>%
   dplyr::mutate(age = purrr::map(.x = data, .f = function(.x) {
-    quantile(.x$age)
-  }))
+    .age <- .x$age
+    .age %>% quantile() -> .q
+    .all <- glue::glue('{.q[3]} ({.q[2]}-{.q[4]})')
+    .q <- .age[.age<=45] %>% quantile()
+    .less45 <- glue::glue('{.q[3]} ({.q[2]}-{.q[4]})')
+    .q <- .age[.age>45] %>% quantile()
+    .greater45 <- glue::glue('{.q[3]} ({.q[2]}-{.q[4]})')
+    tibble::tibble(
+      name = c('Age', '<=45', '>45'),
+      iqr = c(.all, .less45, .greater45)
+    )
+  })) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-3) %>%
+  tidyr::unnest(age)  ->
+  wuham.tom.used.samples.age
+
+wuham.tom.used.samples.age %>%
+  dplyr::filter(name == "Age") %>%
+  dplyr::select(-name) %>%
+  tidyr::spread(key = oc, value = iqr) ->
+  wuham.tom.used.samples.age.spread
+writexl::write_xlsx(x = wuham.tom.used.samples.age.spread, path = glue::glue("data/reviseoutput/age.xlsx"))
+
+
+
+# Save image --------------------------------------------------------------
+
+save.image(file = "data/rda/08-stat-oc-benign-hc.rda")
