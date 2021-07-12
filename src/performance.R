@@ -261,7 +261,7 @@ fn_get_merge_plots <- function(.list, .datasets) {
   .ca125 <- .list$ca125$performance
 
   purrr::map2_df(
-    .x = list("CA125", "THPOC", "THPOC + CA125"),
+    .x = list("CA125", "TEPOC", "TEPOC + CA125"),
     .y = list(.ca125, .panel, .panel_ca125),
     .f = function(.x, .y) {
       .y %>%
@@ -299,7 +299,7 @@ fn_delong_test <- function(.x) {
       broom::tidy() %>%
       dplyr::mutate(`P value` = format(p.value, digits = 3,scientific = TRUE)) %>%
       dplyr::select(`P value`) %>%
-      tibble::add_column(name = "THPOC", .before = 1),
+      tibble::add_column(name = "TEPOC", .before = 1),
     tibble::tibble(name = "CA125", `P value` = "-"),
     pROC::roc.test(
       pROC::roc(.x.panel_ca125$truth, .x.panel_ca125$prob.M),
@@ -309,7 +309,7 @@ fn_delong_test <- function(.x) {
       broom::tidy() %>%
       dplyr::mutate(`P value` = format(p.value, digits = 3,scientific = TRUE)) %>%
       dplyr::select(`P value`) %>%
-      tibble::add_column(name = "THPOC + CA125", .before = 1)
+      tibble::add_column(name = "TEPOC + CA125", .before = 1)
   ) %>%
     dplyr::mutate(`P value` = gsub(pattern = "e", replacement = "x10^", x = `P value`))
 }
@@ -332,15 +332,15 @@ fn_get_merge_metrics <- function(.list) {
     dplyr::mutate(p.value = purrr::map(.x = data, .f = fn_delong_test)) %>%
     dplyr::select(-data) %>%
     tidyr::unnest(p.value) %>%
-    dplyr::mutate(name = factor(name, levels = c("THPOC", "CA125", "THPOC + CA125")))->
+    dplyr::mutate(name = factor(name, levels = c("TEPOC", "CA125", "TEPOC + CA125")))->
     .pvalue
 
   .list %>%
     purrr::map("metrics") %>%
     tibble::enframe() %>%
     tidyr::unnest(cols = value) %>%
-    dplyr::mutate(name = plyr::revalue(x = name, replace = c("panel" = "THPOC", "ca125" = "CA125", "panel_ca125" = "THPOC + CA125"))) %>%
-    dplyr::mutate(name = factor(name, levels = c("THPOC", "CA125", "THPOC + CA125"))) %>%
+    dplyr::mutate(name = plyr::revalue(x = name, replace = c("panel" = "TEPOC", "ca125" = "CA125", "panel_ca125" = "TEPOC + CA125"))) %>%
+    dplyr::mutate(name = factor(name, levels = c("TEPOC", "CA125", "TEPOC + CA125"))) %>%
     dplyr::arrange(cohort, name) %>%
     dplyr::select(2, 1, 3:10) %>%
     dplyr::inner_join(.pvalue, by = c("cohort", "name"))
