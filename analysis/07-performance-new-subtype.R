@@ -118,7 +118,8 @@ fn_get_epi_task <- function(.task, .w, .t) {
     dplyr::select(barcode, epi.non.epi) ->
     .td
 
-  .wtd <- dplyr::bind_rows(.wd, .td)
+  # .wtd <- dplyr::bind_rows(.wd, .td)
+  .wtd <- dplyr::bind_rows(.wd)
 
   .epi.hc <- .wtd %>% dplyr::filter(epi.non.epi != "non-epithelial")
   .nepi.hc <- .wtd %>% dplyr::filter(epi.non.epi != "epithelial")
@@ -171,8 +172,8 @@ fn_get_endo_task <- function(.task, .t, .endo) {
     dplyr::select(barcode, class) ->
     .we
 
-  .wtd <- dplyr::bind_rows(.we, .te)
-  .wtd %>% dplyr::group_by(class) %>% dplyr::count()
+  # .wtd <- dplyr::bind_rows(.we, .te)
+  .wtd <- dplyr::bind_rows(.we)
 
   purrr::map(
     .x = .task,
