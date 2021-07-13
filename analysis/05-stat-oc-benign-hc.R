@@ -75,6 +75,33 @@ wuham.tom.used.samples.age %>%
 writexl::write_xlsx(x = wuham.tom.used.samples.age.spread, path = glue::glue("data/reviseoutput/age.xlsx"))
 
 
+wuhan.tom.used.samples %>%
+  dplyr::group_by(type) %>%
+  tidyr::nest() %>%
+  dplyr::mutate(age = purrr::map(.x = data, .f = function(.x) {
+    .age <- .x$age
+    .age %>% quantile() -> .q
+    .all <- glue::glue('{.q[3]} ({.q[2]}-{.q[4]})')
+    .q <- .age[.age<=45] %>% quantile()
+    .less45 <- glue::glue('{.q[3]} ({.q[2]}-{.q[4]})')
+    .q <- .age[.age>45] %>% quantile()
+    .greater45 <- glue::glue('{.q[3]} ({.q[2]}-{.q[4]})')
+    tibble::tibble(
+      name = c('Age', '<=45', '>45'),
+      iqr = c(.all, .less45, .greater45)
+    )
+  })) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-2) %>%
+  tidyr::unnest(age)  ->
+  wuham.tom.used.samples.age.type
+
+wuham.tom.used.samples.age.type %>%
+  dplyr::filter(name == "Age") %>%
+  dplyr::select(-name) %>%
+  tidyr::spread(key = type, value = iqr) ->
+  wuham.tom.used.samples.age.spread.type
+writexl::write_xlsx(x = wuham.tom.used.samples.age.spread.type, path = glue::glue("data/reviseoutput/age.type.xlsx"))
 
 # Save image --------------------------------------------------------------
 
