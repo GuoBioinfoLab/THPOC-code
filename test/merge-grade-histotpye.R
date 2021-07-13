@@ -54,8 +54,12 @@ wuhan.tom.grade.histotype %>%
   dplyr::slice(3,4,2,1)
 
 wuhan.tom.grade.histotype %>%
+  writexl::write_xlsx(path = "data/reviseoutput/wuhan.tom.grade.histotype.xlsx")
+
+wuhan.tom.grade.histotype %>%
   readr::write_rds(file = "data/rda/wuhan.tom.grade.histotype.rds.gz", compress = "gz")
 
 # Save image --------------------------------------------------------------
 
 save.image(file = "data/rda/merge-grade-histotype.rda")
+load(file = "data/rda/merge-grade-histotype.rda")
