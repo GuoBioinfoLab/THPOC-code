@@ -9,7 +9,7 @@ path_root=/home/liucj/github/THPOC-code
 path_analysis=${path_root}/analysis
 path_modeling=${path_root}/modeling
 path_src=${path_root}/src
-rmd=${path_root}/test/scripts-word.Rmd
+rmd=${path_root}/patch/scripts-word.Rmd
 license=${path_root}/LICENSE
 
 echo '
