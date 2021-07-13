@@ -203,3 +203,7 @@ fn_predict_subtype(
   .name = "ca125.500",
   .out = "09-CA125-500"
 )
+
+# Save image --------------------------------------------------------------
+
+save.image(file = "data/rda/09-ca125-500.rda")
