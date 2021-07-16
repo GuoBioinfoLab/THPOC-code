@@ -330,6 +330,7 @@ fn_get_merge_metrics <- function(.list) {
     .for_delong_test
 
   .for_delong_test %>%
+    # dplyr::filter(cohort != "DC") %>%
     dplyr::mutate(delong.p.value = purrr::map(.x = data, .f = fn_delong_test)) %>%
     dplyr::mutate(sn.sp.p.value = purrr::map(.x = data, .f = fn_sn_sp_test)) %>%
     dplyr::select(-data) %>%
