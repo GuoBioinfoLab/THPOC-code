@@ -19,6 +19,9 @@ tom.se <- readr::read_rds(file = "data/rda/tom.se.rds.gz")
 bm.hc.task <- readr::read_rds(file = "data/rda/bm.hc.task.rds.gz")
 model.list <- readr::read_rds(file = "data/rda/model.list.rds.gz")
 
+Grade_Histotype_samples <- readr::read_rds(file = "data/rda/wuhan.tom.grade.histotype.rds.gz") %>%
+  dplyr::filter(!oc %in% c("OC44", "OC521"))
+
 # src ---------------------------------------------------------------------
 
 source(file = "src/utils.R")
@@ -116,6 +119,70 @@ fn_get_ca125_35_task <- function(.task, .w, .t) {
   list(
     bm.hc = .bm.hc,
     bm.bam = .bm.bam
+  )
+}
+
+fn_get_sr.el_task <- function(.task, .w, .t, .gh) {
+  .w@colData %>%
+    as.data.frame() %>%
+    dplyr::filter(oc %in% c("OC79", "OC172")) %>%
+    dplyr::mutate(stage = ifelse(type == "normal", "H", stage)) %>%
+    # dplyr::mutate(type = plyr::revalue(x = type, replace = c("benign" = "B", "malignant" = "M", "normal" = "H", "unkown" = "M"))) %>%
+    dplyr::select(barcode, stage) ->
+    .wd
+
+  .t@colData %>%
+    as.data.frame() %>%
+    dplyr::select(barcode, stageFourGroups, Stage) %>%
+    dplyr::mutate(stage = plyr::revalue(
+      x = stageFourGroups,
+      replace = c(
+        "benign" = "B",
+        "healthy control" = "H",
+        "I" = "E",
+        "II" = "E",
+        "III" = "L",
+        "IV" = "L"
+      ))) %>%
+    dplyr::mutate(stage = ifelse(Stage == "IIB", "L", stage)) %>%
+    dplyr::select(barcode, stage) ->
+    .td
+
+  .wtd <- dplyr::bind_rows(.wd, .td) %>%
+    dplyr::left_join(.gh, by = "barcode")
+  .wtdbh <- .wtd %>% dplyr::filter(stage %in% c("B", "H"))
+
+  .sr.hc <- .wtd %>% dplyr::filter(grade == "high" & histotype == "serous") %>% dplyr::bind_rows(.wtdbh)
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .hs <- c(na.omit(.s[c(.sr.hc$barcode)]))
+
+      .x$samples <- list(Serous = .hs)
+      .x
+    }) ->
+    .sr.hc.task
+
+  .sr.bam <- .sr.hc %>% dplyr::filter(stage != "H")
+  purrr::map(
+    .x = .task,
+    .f = function(.x) {
+      .v <- purrr::reduce(.x$samples, .f = c)
+      .s <- .v[!duplicated(names(.v))]
+
+      .hs <- c(na.omit(.s[c(.sr.bam$barcode)]))
+
+      .x$samples <- list(Serous = .hs)
+      .x
+    }) ->
+    .sr.bam.task
+
+  list(
+    sr.hc = .sr.hc.task,
+    sr.bam = .sr.bam.task
   )
 }
 
@@ -265,6 +332,21 @@ fn_predict_subtype(
   .task = ca125.35.task,
   .name = "ca125.35",
   .out = "10-CA125-35"
+)
+
+
+# Stage serous ------------------------------------------------------------
+sr.el.hc.bam.task <- fn_get_sr.el_task(.task = bm.hc.task, .w = wuhan.se, .t = tom.se, .gh = Grade_Histotype_samples)
+readr::write_rds(
+  x = sr.el.hc.bam.task,
+  file = "data/rda/sr.el.hc.bam.task.rds.gz",
+  compress = "gz"
+)
+
+fn_predict_subtype(
+  .task = sr.el.hc.bam.task,
+  .name = "sr.el.hc.bam",
+  .out = "11-SR-EL"
 )
 
 
